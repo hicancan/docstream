@@ -2,6 +2,7 @@
   {
     "type": "heading",
     "level": 1,
+    "anchor": "复习计划",
     "inlines": [
       {
         "type": "text",

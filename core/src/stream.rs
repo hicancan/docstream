@@ -1,5 +1,5 @@
 //! Text as it streams in, read again each time into the whole tree, each top-level block keyed by what it holds.
-use crate::read::read_ranged;
+use crate::read::{read_ranged, anchor_blocks};
 use crate::tree::Block;
 use serde::Serialize;
 
@@ -27,21 +27,22 @@ impl Stream {
 
     fn update(&self) -> Update {
         let ranged = read_ranged(&self.text);
-        let mut blocks: Vec<Keyed> = Vec::with_capacity(ranged.len());
-        let Some(((_, last), settled)) = ranged.split_last() else { return Update { blocks, done: self.done } };
+        let mut blocks: Vec<(Block, bool)> = Vec::with_capacity(ranged.len());
+        let Some(((_, last), settled)) = ranged.split_last() else { return Update { blocks: Vec::new(), done: self.done } };
         // A block is settled once a blank line has come after it: until then the next line may still join it
         // (a table's next row, a list's next item, a quote's lazy line).
         for (block, range) in settled {
             let after = &self.text[range.end.saturating_sub(1)..];
-            blocks.push(keyed(block.clone(), self.done || after.contains("\n\n")));
+            blocks.push((block.clone(), self.done || after.contains("\n\n")));
         }
         if self.done {
-            for (block, _) in read_ranged(&self.text[last.start..]) { blocks.push(keyed(block, true)); }
+            for (block, _) in read_ranged(&self.text[last.start..]) { blocks.push((block, true)); }
         } else {
             // The block being written, its open marks closed for now so that it does not flicker.
-            for (block, _) in read_ranged(&close_open_marks(&self.text[last.start..])) { blocks.push(keyed(block, false)); }
+            for (block, _) in read_ranged(&close_open_marks(&self.text[last.start..])) { blocks.push((block, false)); }
         }
-        Update { blocks, done: self.done }
+        anchor_blocks(blocks.iter_mut().map(|(block, _)| block));
+        Update { blocks: blocks.into_iter().map(|(block, settled)| keyed(block, settled)).collect(), done: self.done }
     }
 }
 

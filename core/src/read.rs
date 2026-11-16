@@ -2,6 +2,7 @@
 use crate::tree::{Align, Alert, Block, Inline, Item};
 use pulldown_cmark::{Alignment, BlockQuoteKind, CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use std::ops::Range;
+use std::collections::HashMap;
 
 pub(crate) fn options() -> Options {
     Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS | Options::ENABLE_MATH | Options::ENABLE_GFM
@@ -19,6 +20,7 @@ pub(crate) fn read_ranged(text: &str) -> Vec<(Block, Range<usize>)> {
         let range = reader.events[reader.at].1.clone();
         if let Some(block) = reader.block() { blocks.push((block, range)); }
     }
+    anchor_blocks(blocks.iter_mut().map(|(block, _)| block));
     blocks
 }
 
@@ -46,7 +48,7 @@ impl<'a> Reader<'a> {
                 if let (Some(Inline::Math { tex, display: true }), None) = (meant.next(), meant.next()) { return Some(Block::Math { tex: tex.clone() }); }
                 Some(Block::Paragraph { inlines })
             }
-            Event::Start(Tag::Heading { level, .. }) => Some(Block::Heading { level: level as u8, inlines: self.inlines(TagEnd::Heading(level)) }),
+            Event::Start(Tag::Heading { level, .. }) => Some(Block::Heading { level: level as u8, anchor: String::new(), inlines: self.inlines(TagEnd::Heading(level)) }),
             Event::Start(Tag::BlockQuote(kind)) => {
                 let blocks = self.blocks_until_end();
                 Some(match kind {
@@ -209,4 +211,41 @@ pub(crate) fn plain(inlines: &[Inline]) -> String {
         Inline::Image { alt, .. } => alt.clone(),
         Inline::Break => "\n".into(),
     }).collect()
+}
+
+/// The document owns its heading addresses; every renderer and index reads the same value.
+pub(crate) fn anchor_blocks<'a>(blocks: impl IntoIterator<Item = &'a mut Block>) {
+    fn plain(inlines: &[Inline]) -> String {
+        inlines.iter().map(|inline| match inline {
+            Inline::Text { text } | Inline::Code { text } => text.clone(),
+            Inline::Math { tex, .. } => tex.clone(),
+            Inline::Strong { children } | Inline::Emphasis { children } | Inline::Strike { children } | Inline::Highlight { children }
+            | Inline::Superscript { children } | Inline::Subscript { children } | Inline::Link { children, .. } => plain(children),
+            Inline::Image { alt, .. } => alt.clone(), Inline::Break => " ".into(),
+        }).collect()
+    }
+    fn visit(block: &mut Block, ids: &mut HashMap<String, usize>) {
+        match block {
+            Block::Heading { anchor, inlines, .. } => {
+                let base: String = plain(inlines).trim().to_lowercase().chars().filter_map(|c|
+                    if c.is_alphanumeric() || c == '-' || c == '_' { Some(c) }
+                    else if c.is_whitespace() { Some('-') } else { None }).collect();
+                let base = if base.is_empty() { "section".to_string() } else { base };
+                let mut candidate = base.clone();
+                let mut number = *ids.get(&base).unwrap_or(&0);
+                while ids.contains_key(&candidate) {
+                    number += 1;
+                    candidate = format!("{base}-{number}");
+                }
+                ids.insert(base, number);
+                ids.insert(candidate.clone(), 0);
+                *anchor = candidate;
+            }
+            Block::Quote { blocks } | Block::Alert { blocks, .. } => for block in blocks { visit(block, ids); },
+            Block::List { items, .. } => for item in items { for block in &mut item.blocks { visit(block, ids); } },
+            _ => {},
+        }
+    }
+    let mut ids = HashMap::new();
+    for block in blocks { visit(block, &mut ids); }
 }

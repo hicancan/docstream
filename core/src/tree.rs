@@ -6,7 +6,7 @@ use serde::Serialize;
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Block {
     Paragraph { inlines: Vec<Inline> },
-    Heading { level: u8, inlines: Vec<Inline> },
+    Heading { level: u8, anchor: String, inlines: Vec<Inline> },
     Quote { blocks: Vec<Block> },
     /// A GitHub alert: > [!NOTE] and its kin.
     Alert { kind: Alert, blocks: Vec<Block> },

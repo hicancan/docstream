@@ -12,7 +12,7 @@ export type Inline =
 export interface Item { checked?: boolean; blocks: Block[] }
 export type Block =
     | { type: 'paragraph'; inlines: Inline[] }
-    | { type: 'heading'; level: number; inlines: Inline[] }
+    | { type: 'heading'; level: number; anchor: string; inlines: Inline[] }
     | { type: 'quote'; blocks: Block[] }
     | { type: 'alert'; kind: AlertKind; blocks: Block[] }
     | { type: 'list'; ordered: boolean; start: number; items: Item[] }

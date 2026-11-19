@@ -65,10 +65,14 @@ fn styled(c: char, face: Face) -> char {
     let at = |base: u32, offset: u32| char::from_u32(base + offset).unwrap_or(c);
     let (upper, lower, digit) = (c.is_ascii_uppercase(), c.is_ascii_lowercase(), c.is_ascii_digit());
     let i = if upper { c as u32 - 'A' as u32 } else if lower { c as u32 - 'a' as u32 } else if digit { c as u32 - '0' as u32 } else { 0 };
+    // Greek in Unicode's order, the math alphabets keeping its gap after ρ (ς) and before Σ.
+    let greek = (c as u32).wrapping_sub('α' as u32);
+    let greek_upper = (c as u32).wrapping_sub('Α' as u32);
     match face {
         Face::Upright => c,
-        Face::Italic => match c { 'h' => 'ℎ', _ if upper => at(0x1D434, i), _ if lower => at(0x1D44E, i), 'α'..='ω' => at(0x1D6FC, c as u32 - 'α' as u32), 'ϵ' => '𝜖', 'ϑ' => '𝜗', 'ϕ' => '𝜙', 'ϱ' => '𝜚', 'ϖ' => '𝜛', _ => c },
-        Face::Bold => if upper { at(0x1D400, i) } else if lower { at(0x1D41A, i) } else if digit { at(0x1D7CE, i) } else { c },
+        Face::Italic => match c { 'h' => 'ℎ', _ if upper => at(0x1D434, i), _ if lower => at(0x1D44E, i), 'α'..='ω' => at(0x1D6FC, greek), 'Α'..='Ω' => at(0x1D6E2, greek_upper), 'ϵ' => '𝜖', 'ϑ' => '𝜗', 'ϕ' => '𝜙', 'ϱ' => '𝜚', 'ϖ' => '𝜛', _ => c },
+        Face::Bold => match c { _ if upper => at(0x1D400, i), _ if lower => at(0x1D41A, i), _ if digit => at(0x1D7CE, i), 'α'..='ω' => at(0x1D6C2, greek), 'Α'..='Ω' => at(0x1D6A8, greek_upper), 'ϵ' => '𝛜', 'ϑ' => '𝛝', 'ϕ' => '𝛟', 'ϱ' => '𝛠', 'ϖ' => '𝛡', '∇' => '𝛁', '∂' => '𝛛', _ => c },
+        Face::BoldItalic => match c { _ if upper => at(0x1D468, i), _ if lower => at(0x1D482, i), _ if digit => at(0x1D7CE, i), 'α'..='ω' => at(0x1D736, greek), 'Α'..='Ω' => at(0x1D71C, greek_upper), 'ϵ' => '𝝐', 'ϑ' => '𝝑', 'ϕ' => '𝝓', 'ϱ' => '𝝔', 'ϖ' => '𝝕', '∇' => '𝜵', '∂' => '𝝏', _ => c },
         Face::DoubleStruck => match c { 'C' => 'ℂ', 'H' => 'ℍ', 'N' => 'ℕ', 'P' => 'ℙ', 'Q' => 'ℚ', 'R' => 'ℝ', 'Z' => 'ℤ', _ if upper => at(0x1D538, i), _ if lower => at(0x1D552, i), _ if digit => at(0x1D7D8, i), _ => c },
         Face::Script => match c { 'B' => 'ℬ', 'E' => 'ℰ', 'F' => 'ℱ', 'H' => 'ℋ', 'I' => 'ℐ', 'L' => 'ℒ', 'M' => 'ℳ', 'R' => 'ℛ', 'e' => 'ℯ', 'g' => 'ℊ', 'o' => 'ℴ', _ if upper => at(0x1D49C, i), _ if lower => at(0x1D4B6, i), _ => c },
         Face::Fraktur => match c { 'C' => 'ℭ', 'H' => 'ℌ', 'I' => 'ℑ', 'R' => 'ℜ', 'Z' => 'ℨ', _ if upper => at(0x1D504, i), _ if lower => at(0x1D51E, i), _ => c },
@@ -163,7 +167,7 @@ fn layout(node: &Node, st: St) -> Bx {
             let mut b = row(text.chars().map(|ch| char_box(styled(ch, *face), size)).collect());
             if text.chars().count() == 1 { if let Some(Item::Glyph { id, .. }) = b.items.first() { b.glyph = Some(*id); b.accent_at = glyph_box(GlyphId(*id), size).accent_at; } }
             // An italic letter keeps its correction for what follows; a symbol does not lean.
-            if !matches!(face, Face::Italic) { b.italic = 0.0; }
+            if !matches!(face, Face::Italic | Face::BoldItalic) { b.italic = 0.0; }
             b.class = Some(*class); b
         }
         Node::Text { text, class } => { let mut b = row(text.chars().map(|ch| char_box(ch, size)).collect()); b.italic = 0.0; b.class = Some(*class); b }
@@ -288,7 +292,8 @@ fn layout(node: &Node, st: St) -> Bx {
         Node::Arrow { symbol, over, under } => {
             let (p, q) = (over.as_ref().map(|n| layout(n, st.sup())), under.as_ref().map(|n| layout(n, st.sub())));
             let span = p.as_ref().map_or(0.0, |b| b.w).max(q.as_ref().map_or(0.0, |b| b.w)) + 0.6 * size;
-            let mut arrow = stretched_wide(*symbol, span.max(1.0 * size), size);
+            // An equals sign has no longer forms in the font: two rules as long as the words, where its bars are.
+            let mut arrow = if *symbol == '=' { equals(span.max(1.0 * size), size) } else { stretched_wide(*symbol, span.max(1.0 * size), size) };
             arrow.glyph = None;
             let mut out = stack(arrow, p, q, size);
             out.class = Some(Class::Rel); out
@@ -438,6 +443,16 @@ fn delimiter(c: char, height: f32, size: f32) -> Bx {
 
 /// An accent, brace or arrow grown sideways to cover `width` ems.
 fn stretched_wide(c: char, width: f32, size: f32) -> Bx { grown(c, width, size, false) }
+
+/// An equals sign `width` long: two rules of the fraction's thickness about the math axis.
+fn equals(width: f32, size: f32) -> Bx {
+    let f = font(); let c = f.constants();
+    let (axis, t, gap) = (f.c(c.axis_height()) * size, f.c(c.fraction_rule_thickness()) * size, 0.11 * size);
+    let mut out = Bx { w: width, h: axis + gap + t, d: 0.0, ..Bx::default() };
+    out.items.push(Item::Rule { x: 0.0, y: axis + gap + t / 2.0, width, height: t });
+    out.items.push(Item::Rule { x: 0.0, y: axis - gap + t / 2.0, width, height: t });
+    out
+}
 
 /// `over` and `under` centred above and below `base`, at the gaps TeX keeps for limits.
 fn stack(base: Bx, over: Option<Bx>, under: Option<Bx>, size: f32) -> Bx {

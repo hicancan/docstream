@@ -7,7 +7,7 @@ pub enum Class { Ord, Op, Bin, Rel, Open, Close, Punct, Inner }
 
 /// Which face a letter is drawn in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Face { Italic, Upright, Bold, DoubleStruck, Script, Fraktur, SansSerif, Mono }
+pub enum Face { Italic, Upright, Bold, BoldItalic, DoubleStruck, Script, Fraktur, SansSerif, Mono }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Node {
@@ -88,6 +88,13 @@ const SYMBOLS: &[(&str, char, Class)] = &[
     ("therefore", '∴', Class::Rel), ("because", '∵', Class::Rel), ("checkmark", '✓', Class::Ord), ("square", '□', Class::Ord), ("blacksquare", '■', Class::Ord),
     ("lozenge", '◊', Class::Ord), ("flat", '♭', Class::Ord), ("sharp", '♯', Class::Ord), ("natural", '♮', Class::Ord), ("complement", '∁', Class::Ord), ("wp", '℘', Class::Ord), ("mho", '℧', Class::Ord),
     ("lvert", '|', Class::Open), ("rvert", '|', Class::Close), ("lVert", '‖', Class::Open), ("rVert", '‖', Class::Close),
+    ("preccurlyeq", '≼', Class::Rel), ("succcurlyeq", '≽', Class::Rel), ("bowtie", '⋈', Class::Rel), ("Longleftrightarrow", '⟺', Class::Rel),
+    ("lessgtr", '≶', Class::Rel), ("gtrless", '≷', Class::Rel), ("lessdot", '⋖', Class::Rel), ("gtrdot", '⋗', Class::Rel), ("lll", '⋘', Class::Rel), ("ggg", '⋙', Class::Rel),
+    ("nmid", '∤', Class::Rel), ("nparallel", '∦', Class::Rel), ("ncong", '≇', Class::Rel), ("triangleright", '▷', Class::Bin), ("triangleleft", '◁', Class::Bin),
+    ("bigcirc", '◯', Class::Bin), ("bigtriangledown", '▽', Class::Bin), ("bigtriangleup", '△', Class::Bin), ("circledast", '⊛', Class::Bin), ("circledcirc", '⊚', Class::Bin),
+    ("circleddash", '⊝', Class::Bin), ("bigstar", '★', Class::Ord), ("dag", '†', Class::Ord), ("ddag", '‡', Class::Ord), ("surd", '√', Class::Ord), ("yen", '¥', Class::Ord),
+    ("AA", 'Å', Class::Ord), ("imath", 'ı', Class::Ord), ("jmath", 'ȷ', Class::Ord), ("lbrack", '[', Class::Open), ("rbrack", ']', Class::Close),
+    ("dotsc", '…', Class::Inner), ("dotso", '…', Class::Inner), ("dotsb", '⋯', Class::Inner), ("dotsm", '⋯', Class::Inner), ("dotsi", '⋯', Class::Inner), ("hdots", '…', Class::Inner),
     ("backslash", '\\', Class::Ord), ("%", '%', Class::Ord), ("$", '$', Class::Ord), ("#", '#', Class::Ord), ("&", '&', Class::Ord), ("_", '_', Class::Ord),
 ];
 const LARGE: &[(&str, char, bool)] = &[
@@ -103,7 +110,7 @@ const NAMES: &[(&str, bool)] = &[
 const ACCENTS: &[(&str, char, bool)] = &[
     ("hat", '\u{302}', false), ("widehat", '\u{302}', true), ("check", '\u{30C}', false), ("tilde", '\u{303}', false), ("widetilde", '\u{303}', true),
     ("bar", '\u{304}', false), ("vec", '\u{20D7}', false), ("dot", '\u{307}', false), ("ddot", '\u{308}', false), ("acute", '\u{301}', false), ("grave", '\u{300}', false),
-    ("breve", '\u{306}', false), ("mathring", '\u{30A}', false), ("overrightarrow", '→', true), ("overleftarrow", '←', true),
+    ("breve", '\u{306}', false), ("mathring", '\u{30A}', false), ("overrightarrow", '→', true), ("overleftarrow", '←', true), ("Vec", '\u{20D7}', false),
 ];
 
 fn class_of(c: char) -> Class {
@@ -241,10 +248,44 @@ impl Parser {
                 let class = if name.ends_with('l') { Class::Open } else if name.ends_with('r') { Class::Close } else { class_of(delimiter) };
                 Node::Sized { delimiter, class, size }
             }
-            "text" | "textrm" | "textnormal" | "mbox" | "textit" | "textbf" => Node::Text { text: self.braced_text(), class: Class::Ord },
+            "text" | "textrm" | "textnormal" | "mbox" | "textit" | "textbf" | "texttt" | "textsf" | "textup" | "textsl" | "emph" => Node::Text { text: self.braced_text(), class: Class::Ord },
+            // A letter or number in a circle, as Unicode has them; anything longer in a frame.
+            "textcircled" => {
+                let inside = self.braced_text();
+                let mut chars = inside.chars();
+                let circled = match (chars.next(), chars.next()) {
+                    (Some(c @ '1'..='9'), None) => char::from_u32(0x2460 + c as u32 - '1' as u32),
+                    (Some('0'), None) => Some('⓪'),
+                    (Some(c @ 'A'..='Z'), None) => char::from_u32(0x24B6 + c as u32 - 'A' as u32),
+                    (Some(c @ 'a'..='z'), None) => char::from_u32(0x24D0 + c as u32 - 'a' as u32),
+                    _ => inside.parse::<u32>().ok().filter(|n| (10..=20).contains(n)).and_then(|n| char::from_u32(0x2469 + n - 10)),
+                };
+                match circled { Some(c) => Node::Symbol { text: c.to_string(), class: Class::Ord, face: Face::Upright }, None => Node::Boxed(Box::new(Node::Text { text: inside, class: Class::Ord })) }
+            }
+            // An equation's number, set apart at its end: (n), or as written with \tag*.
+            "tag" => {
+                let starred = self.peek() == Some('*');
+                if starred { self.at += 1; }
+                let number = self.braced_text();
+                Node::Group(vec![Node::Space(2.0), Node::Text { text: if starred { number } else { format!("({number})") }, class: Class::Ord }])
+            }
+            // What is written made an atom of another class: \mathrel{\mathop:} is a relation.
+            "mathop" | "mathrel" | "mathbin" | "mathord" | "mathopen" | "mathclose" | "mathpunct" | "mathinner" => {
+                let class = match name.as_str() { "mathop" => Class::Op, "mathrel" => Class::Rel, "mathbin" => Class::Bin, "mathopen" => Class::Open, "mathclose" => Class::Close, "mathpunct" => Class::Punct, "mathinner" => Class::Inner, _ => Class::Ord };
+                Node::Stack { base: Box::new(self.argument()), over: None, under: None, class }
+            }
+            "framebox" => { self.optional(); self.optional(); Node::Boxed(Box::new(self.argument())) }
+            "xlongequal" => { let under = self.optional(); let over = self.argument(); Node::Arrow { symbol: '=', over: Some(Box::new(over)), under: under.map(Box::new) } }
+            // The sizes of words, which a formula here keeps at the size of the text around it.
+            "tiny" | "scriptsize" | "footnotesize" | "small" | "normalsize" | "large" | "Large" | "LARGE" | "huge" | "Huge" => Node::Group(vec![]),
+            // The font switches of plain TeX: what follows them in the group, in that face.
+            "bf" | "rm" | "it" | "mit" | "sf" | "tt" | "cal" => {
+                let face = match name.as_str() { "bf" => Face::Bold, "rm" => Face::Upright, "it" | "mit" => Face::Italic, "sf" => Face::SansSerif, "tt" => Face::Mono, _ => Face::Script };
+                restyle(group(self.list(None)), face)
+            }
             "operatorname" => Node::Text { text: self.braced_text(), class: Class::Op },
-            "mathrm" | "mathit" | "mathbf" | "mathbb" | "mathcal" | "mathscr" | "mathfrak" | "mathsf" | "mathtt" | "boldsymbol" | "bm" => {
-                let face = match name.as_str() { "mathrm" => Face::Upright, "mathit" => Face::Italic, "mathbf" | "boldsymbol" | "bm" => Face::Bold, "mathbb" => Face::DoubleStruck, "mathcal" | "mathscr" => Face::Script, "mathfrak" => Face::Fraktur, "mathsf" => Face::SansSerif, _ => Face::Mono };
+            "mathrm" | "mathit" | "mathbf" | "mathbb" | "mathcal" | "mathscr" | "mathfrak" | "mathsf" | "mathtt" | "boldsymbol" | "bm" | "pmb" => {
+                let face = match name.as_str() { "mathrm" => Face::Upright, "mathit" => Face::Italic, "mathbf" => Face::Bold, "boldsymbol" | "bm" | "pmb" => Face::BoldItalic, "mathbb" => Face::DoubleStruck, "mathcal" | "mathscr" => Face::Script, "mathfrak" => Face::Fraktur, "mathsf" => Face::SansSerif, _ => Face::Mono };
                 restyle(self.argument(), face)
             }
             "overset" | "stackrel" => { let over = self.argument(); let base = self.argument(); Node::Stack { base: Box::new(base), over: Some(Box::new(over)), under: None, class: Class::Rel } }
@@ -303,6 +344,8 @@ impl Parser {
             "limits" | "nolimits" | "nonumber" | "notag" | "label" => { if name == "label" { self.braced_text(); } Node::Group(vec![]) }
             other => {
                 if let Some((_, c)) = GREEK.iter().find(|(n, _)| *n == other) { Node::Symbol { text: c.to_string(), class: Class::Ord, face: if c.is_lowercase() { Face::Italic } else { Face::Upright } } }
+                // amsmath's slanted capitals: \varDelta is an italic Δ.
+                else if let Some((_, c)) = other.strip_prefix("var").and_then(|n| GREEK.iter().find(|(g, c)| *g == n && c.is_uppercase())) { Node::Symbol { text: c.to_string(), class: Class::Ord, face: Face::Italic } }
                 else if let Some((_, c, class)) = SYMBOLS.iter().find(|(n, _, _)| *n == other) { Node::Symbol { text: c.to_string(), class: *class, face: Face::Upright } }
                 else if let Some((_, c, limits)) = LARGE.iter().find(|(n, _, _)| *n == other) { Node::LargeOp { symbol: *c, limits: *limits } }
                 else if let Some((n, limits)) = NAMES.iter().find(|(n, _)| *n == other) { Node::NamedOp { name: (*n).into(), limits: *limits } }
@@ -342,7 +385,8 @@ fn group(mut list: Vec<Node>) -> Node { if list.len() == 1 { list.pop().unwrap()
 
 fn restyle(node: Node, to: Face) -> Node {
     match node {
-        Node::Symbol { text, class, face } => Node::Symbol { text, class, face: if matches!(face, Face::Italic | Face::Upright) { to } else { face } },
+        // Bold symbols keep the slant they had: an italic letter is bold italic, an upright one bold.
+        Node::Symbol { text, class, face } => Node::Symbol { text, class, face: match (face, to) { (Face::Upright, Face::BoldItalic) => Face::Bold, (Face::Italic | Face::Upright, _) => to, _ => face } },
         Node::Group(list) => Node::Group(list.into_iter().map(|n| restyle(n, to)).collect()),
         Node::Scripts { base, sup, sub } => Node::Scripts { base: Box::new(restyle(*base, to)), sup, sub },
         other => other,

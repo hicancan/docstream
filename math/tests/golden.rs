@@ -41,3 +41,18 @@ fn what_is_not_understood_is_shown_as_written() {
     let svg = docstream_math::svg(r"a<b", true);
     assert!(svg.starts_with("<svg") && svg.contains("<title>a&lt;b</title>"));
 }
+
+/// Commands of LaTeX, amsmath and plain TeX that NJUPT's notes write are typeset, none kept as written.
+#[test]
+fn the_commands_notes_write_are_understood() {
+    for tex in [r"\pmb{\alpha}", r"{\bf x}", r"{\rm d}", r"{\it t}", r"{\sf A}", r"{\tt a}", r"{\cal L}", r"\tag{1}", r"\tag*{(a)}",
+        r"\textcircled{9}", r"\textcircled{12}", r"\textcircled{-}", r"\mathrel{\mathop:}", r"\mathbin{\#}", r"\framebox{2}", r"\xlongequal{c}",
+        r"\preccurlyeq", r"\succcurlyeq", r"\bowtie", r"\Longleftrightarrow", r"\bigcirc", r"\bigtriangledown", r"\bigstar", r"\lessgtr",
+        r"\lessdot", r"\gtrdot", r"\dag", r"\nmid", r"\circledast", r"\circledcirc", r"\triangleright", r"\ncong", r"\surd", r"\lll",
+        r"\imath", r"\jmath", r"\lbrack x \rbrack", r"\yen", r"\AA", r"\dotsc", r"\hdots", r"\varDelta", r"\varPhi", r"\Vec{a}",
+        r"\small x", r"\texttt{int}", r"\textsf{A}"] {
+        let left: Vec<String> = docstream_math::typeset(tex, true).items.into_iter()
+            .filter_map(|item| match item { docstream_math::Item::Text { text, .. } if text.starts_with('\\') => Some(text), _ => None }).collect();
+        assert!(left.is_empty(), "{tex}: {left:?}");
+    }
+}

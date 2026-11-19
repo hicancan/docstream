@@ -56,8 +56,9 @@ fn fnv(bytes: &[u8]) -> u64 {
     bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3))
 }
 
-/// The marks a block being written has opened and not yet closed (**, ~~, ==, `, $, $$), closed at its end, the
-/// last opened first. Inside code, nothing is a mark; an open code fence is left to the reader, which reads it to the end.
+/// The marks a block being written has opened and not yet closed (**, ~~, ==, `, $, $$, \\( and \\[), closed at its
+/// end, the last opened first. Inside code, nothing is a mark; an open code fence is left to the reader, which reads it
+/// to the end.
 pub(crate) fn close_open_marks(text: &str) -> String {
     if text.trim_start().starts_with("```") || text.trim_start().starts_with("~~~") { return text.to_string(); }
     let mut open: Vec<&'static str> = Vec::new();
@@ -66,9 +67,12 @@ pub(crate) fn close_open_marks(text: &str) -> String {
     while i < bytes.len() {
         let rest = &text[i..];
         let in_code = open.last() == Some(&"`");
-        let in_math = matches!(open.last(), Some(&"$") | Some(&"$$"));
+        let in_math = matches!(open.last(), Some(&"$") | Some(&"$$") | Some(&"\\(") | Some(&"\\["));
+        // An escaped backslash is no mark, nor the start of one.
+        if !in_code && rest.starts_with("\\\\") { i += 2; continue; }
         let mark = if rest.starts_with('`') { Some("`") }
             else if in_code { None }
+            else if rest.starts_with("\\(") || rest.starts_with("\\)") || rest.starts_with("\\[") || rest.starts_with("\\]") { Some(&rest[..2]) }
             else if rest.starts_with("$$") { Some("$$") }
             else if rest.starts_with('$') { Some("$") }
             else if in_math { None }
@@ -78,15 +82,27 @@ pub(crate) fn close_open_marks(text: &str) -> String {
             else { None };
         match mark {
             Some(mark) => {
-                if open.last() == Some(&mark) { open.pop(); } else if !(in_code || in_math) || mark == "`" && in_code { open.push(mark); }
+                let closes = |opened: &str| if mark.starts_with('\\') { closer(opened) == mark } else { opened == mark };
+                if open.last().is_some_and(|&opened| closes(opened)) { open.pop(); }
+                else if mark == "\\)" || mark == "\\]" {}
+                else if !(in_code || in_math) || mark == "`" && in_code { open.push(static_mark(mark)); }
                 i += mark.len();
             }
             None => i += rest.chars().next().map_or(1, char::len_utf8),
         }
     }
     let mut closed = text.trim_end_matches([' ', '\t']).to_string();
-    for mark in open.iter().rev() { closed.push_str(mark); }
+    for mark in open.iter().rev() { closed.push_str(closer(mark)); }
     closed
+}
+
+/// What closes a mark: itself, but `\\)` for `\\(` and `\\]` for `\\[`; and for a closer, its opener.
+fn closer(mark: &str) -> &'static str {
+    match mark { "\\(" => "\\)", "\\[" => "\\]", "\\)" => "\\(", "\\]" => "\\[", other => static_mark(other) }
+}
+
+fn static_mark(mark: &str) -> &'static str {
+    match mark { "`" => "`", "$$" => "$$", "$" => "$", "**" => "**", "~~" => "~~", "==" => "==", "\\(" => "\\(", "\\[" => "\\[", "\\)" => "\\)", _ => "\\]" }
 }
 
 #[cfg(test)]
@@ -99,6 +115,9 @@ mod tests {
         assert_eq!(close_open_marks("$x^2 **"), "$x^2 **$");
         assert_eq!(close_open_marks("**done** and ==hi=="), "**done** and ==hi==");
         assert_eq!(close_open_marks("```rust\nfn"), "```rust\nfn");
+        assert_eq!(close_open_marks("答案是 \\(x^2 **"), "答案是 \\(x^2 **\\)");
+        assert_eq!(close_open_marks("\\(a\\) 与 \\[b"), "\\(a\\) 与 \\[b\\]");
+        assert_eq!(close_open_marks("\\\\(不是公式"), "\\\\(不是公式");
     }
     #[test]
     fn the_block_being_written_shows_its_open_strong_already_strong() {

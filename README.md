@@ -5,10 +5,10 @@ natively: a web page, an Android app, a Windows app, a blog's build. The kernel 
 or how; there is one reading of every document, everywhere.
 
 **What is read.** CommonMark; GitHub's tables, task lists, strikethrough and alerts (`> [!TIP]`); Typora's
-`==highlight==`, `^superscript^` and `~subscript~`; `$inline$` and `$$display$$` math, kept as TeX; fenced code with its
-language. Emphasis follows the CJK-friendly rule, so `**加粗**，` is bold. Raw HTML is kept as text, never as markup.
-Each heading carries its address in `anchor`, derived from its parsed text and unique within the document. Readers,
-indexes and HTML use that address directly.
+`==highlight==`, `^superscript^` and `~subscript~`; math as `$inline$`, `\(inline\)`, `$$display$$`, `\[display\]` or
+a fence written `math`, kept as TeX; fenced code with its language. Emphasis follows the CJK-friendly rule, so
+`**加粗**，` is bold. Raw HTML is kept as text, never as markup. Each heading carries its address in `anchor`, derived
+from its parsed text and unique within the document. Readers, indexes and HTML use that address directly.
 
 **As it streams.** `Stream.push(text)` gives the whole tree as it now stands, every top-level block with a key that
 changes only when the block does, and marked settled once a blank line and something after it have come, when

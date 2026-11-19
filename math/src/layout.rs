@@ -171,6 +171,7 @@ fn layout(node: &Node, st: St) -> Bx {
             b.class = Some(*class); b
         }
         Node::Text { text, class } => { let mut b = row(text.chars().map(|ch| char_box(ch, size)).collect()); b.italic = 0.0; b.class = Some(*class); b }
+        Node::Unknown(text) => { let mut b = row(text.chars().map(|ch| char_box(ch, size)).collect()); b.italic = 0.0; b.class = Some(Class::Ord); b }
         Node::Group(nodes) => list(nodes, st),
         Node::Space(em) => Bx::space(em * size),
         Node::Style(change, inner) => layout(inner, St::of(*change)),

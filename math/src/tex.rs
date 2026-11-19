@@ -44,6 +44,8 @@ pub enum Node {
     /// Space in ems.
     Space(f32),
     Style(StyleChange, Box<Node>),
+    /// A command not understood, drawn as written so that nothing is lost and a wrong one shows.
+    Unknown(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,8 +109,7 @@ const SYMBOLS: &[(&str, char, Class)] = &[
     ("intercal", '⊤', Class::Bin), ("vartriangleleft", '⊲', Class::Rel), ("vartriangleright", '⊳', Class::Rel), ("vartriangle", '△', Class::Rel),
     ("blacktriangle", '▲', Class::Ord), ("blacktriangledown", '▼', Class::Ord), ("blacktriangleleft", '◀', Class::Ord), ("blacktriangleright", '▶', Class::Ord), ("blacklozenge", '♦', Class::Ord),
     ("boxtimes", '⊠', Class::Bin), ("boxplus", '⊞', Class::Bin), ("boxdot", '⊡', Class::Bin), ("diamondsuit", '♢', Class::Ord), ("heartsuit", '♡', Class::Ord), ("spadesuit", '♠', Class::Ord),
-    ("varkappa", 'ϰ', Class::Ord), ("Nu", 'Ν', Class::Ord), ("Chi", 'Χ', Class::Ord), ("textmu", 'µ', Class::Ord), ("pounds", '£', Class::Ord),
-    ("textless", '<', Class::Ord), ("textgreater", '>', Class::Ord), ("textregistered", '®', Class::Ord),
+    ("varkappa", 'ϰ', Class::Ord), ("pounds", '£', Class::Ord), ("boxminus", '⊟', Class::Bin),
     ("backslash", '\\', Class::Ord), ("%", '%', Class::Ord), ("$", '$', Class::Ord), ("#", '#', Class::Ord), ("&", '&', Class::Ord), ("_", '_', Class::Ord),
 ];
 const LARGE: &[(&str, char, bool)] = &[
@@ -269,8 +270,6 @@ impl Parser {
                 Node::Sized { delimiter, class, size }
             }
             "text" | "textrm" | "textnormal" | "mbox" | "textit" | "textbf" | "texttt" | "textsf" | "textup" | "textsl" | "emph" | "textmd" => Node::Text { text: self.braced_text(), class: Class::Ord },
-            "ref" => Node::Text { text: format!("({})", self.braced_text()), class: Class::Ord },
-            "multicolumn" => { self.braced_text(); self.braced_text(); self.argument() }
             // A letter or number in a circle, as Unicode has them; anything longer in a frame.
             "textcircled" => {
                 let inside = self.braced_text();
@@ -301,8 +300,8 @@ impl Parser {
             // The sizes of words, which a formula here keeps at the size of the text around it.
             "tiny" | "scriptsize" | "footnotesize" | "small" | "normalsize" | "large" | "Large" | "LARGE" | "huge" | "Huge" => Node::Group(vec![]),
             // The font switches of plain TeX: what follows them in the group, in that face.
-            "bf" | "rm" | "it" | "mit" | "sf" | "tt" | "cal" | "em" | "sc" | "scshape" | "normalfont" => {
-                let face = match name.as_str() { "bf" => Face::Bold, "it" | "mit" | "em" => Face::Italic, "sf" => Face::SansSerif, "tt" => Face::Mono, "cal" => Face::Script, _ => Face::Upright };
+            "bf" | "rm" | "it" | "mit" | "sf" | "tt" | "cal" => {
+                let face = match name.as_str() { "bf" => Face::Bold, "rm" => Face::Upright, "it" | "mit" => Face::Italic, "sf" => Face::SansSerif, "tt" => Face::Mono, _ => Face::Script };
                 restyle(group(self.list(None)), face)
             }
             "operatorname" => Node::Text { text: self.braced_text(), class: Class::Op },
@@ -360,7 +359,12 @@ impl Parser {
             "," | "thinspace" => Node::Space(3.0 / 18.0), ":" | ">" | "medspace" => Node::Space(4.0 / 18.0), ";" | "thickspace" => Node::Space(5.0 / 18.0),
             "!" | "negthinspace" => Node::Space(-3.0 / 18.0), "negmedspace" => Node::Space(-4.0 / 18.0), "negthickspace" => Node::Space(-5.0 / 18.0),
             " " => Node::Space(0.25), "enspace" | "enskip" => Node::Space(0.5), "quad" => Node::Space(1.0), "qquad" => Node::Space(2.0),
-            "hspace" => { if self.peek() == Some('*') { self.at += 1; } Node::Space(parse_em(&self.braced_text())) }
+            "hspace" => {
+                if self.peek() == Some('*') { self.at += 1; }
+                let length = self.braced_text();
+                // A length in a unit TeX has, in ems of 10pt type; anything else is kept as written.
+                match ems(&length) { Some(em) => Node::Space(em), None => Node::Unknown(format!("\\hspace{{{length}}}")) }
+            }
             "{" => Node::Symbol { text: "{".into(), class: Class::Open, face: Face::Upright }, "}" => Node::Symbol { text: "}".into(), class: Class::Close, face: Face::Upright },
             "|" => Node::Symbol { text: "‖".into(), class: Class::Ord, face: Face::Upright },
             "\\" => Node::Space(0.0),
@@ -375,7 +379,7 @@ impl Parser {
                 else if let Some((n, limits)) = NAMES.iter().find(|(n, _)| *n == other) { Node::NamedOp { name: (*n).into(), limits: *limits } }
                 else if let Some((_, accent, stretch)) = ACCENTS.iter().find(|(n, _, _)| *n == other) { Node::Accent { base: Box::new(self.argument()), accent: *accent, stretch: *stretch } }
                 // Not understood: kept as written, so that nothing is lost.
-                else { Node::Text { text: format!("\\{other}"), class: Class::Ord } }
+                else { Node::Unknown(format!("\\{other}")) }
             }
         })
     }
@@ -417,15 +421,28 @@ fn restyle(node: Node, to: Face) -> Node {
     }
 }
 
-fn parse_em(text: &str) -> f32 {
+/// A TeX length in ems, taking the em of 10pt type: em, ex, pt, bp, mm, cm, in and mu.
+fn ems(text: &str) -> Option<f32> {
     let text = text.trim();
-    let split = text.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-' && c != '+').unwrap_or(text.len());
-    let val: f32 = text[..split].parse().unwrap_or(0.5);
-    match text[split..].trim() {
-        "pt" => (val / 10.0).max(-2.0),
-        "mu" => val / 18.0,
-        "cm" => val * 2.8,
-        "mm" => val * 0.28,
-        _ => val,
+    let split = text.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-' && c != '+')?;
+    let value: f32 = text[..split].parse().ok()?;
+    let per = match text[split..].trim() { "em" => 1.0, "ex" => 0.431, "pt" => 0.1, "bp" => 0.1004, "mm" => 0.2845, "cm" => 2.845, "in" => 7.227, "mu" => 1.0 / 18.0, _ => return None };
+    Some(value * per)
+}
+
+/// Every command in a formula that is not understood, as written.
+pub fn unknown(node: &Node, out: &mut Vec<String>) {
+    let mut each = |n: &Node| unknown(n, out);
+    match node {
+        Node::Unknown(text) => out.push(text.clone()),
+        Node::Group(list) | Node::Fenced { body: list, .. } => list.iter().for_each(each),
+        Node::Scripts { base, sup, sub } => { each(base); [sup, sub].into_iter().flatten().for_each(|n| each(n)); }
+        Node::Frac { num, den, .. } => { each(num); each(den); }
+        Node::Sqrt { body, index } => { each(body); index.iter().for_each(|n| each(n)); }
+        Node::Accent { base, .. } | Node::Over { base, .. } | Node::Brace { body: base, .. } | Node::Boxed(base) | Node::Phantom(base) | Node::Style(_, base) => each(base),
+        Node::Array { rows, .. } => rows.iter().flatten().for_each(each),
+        Node::Stack { base, over, under, .. } => { each(base); [over, under].into_iter().flatten().for_each(|n| each(n)); }
+        Node::Arrow { over, under, .. } => [over, under].into_iter().flatten().for_each(|n| each(n)),
+        Node::Symbol { .. } | Node::Text { .. } | Node::Sized { .. } | Node::LargeOp { .. } | Node::NamedOp { .. } | Node::Space(_) => {}
     }
 }

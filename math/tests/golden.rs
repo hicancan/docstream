@@ -38,6 +38,7 @@ fn every_prefix_of_every_case_typesets() {
 fn what_is_not_understood_is_shown_as_written() {
     let f = docstream_math::typeset(r"\notacommand{x}", false);
     assert!(!f.items.is_empty());
+    assert_eq!(docstream_math::unknown(r"\frac{\notacommand{x}}{\alpha}"), [r"\notacommand"]);
     let svg = docstream_math::svg(r"a<b", true);
     assert!(svg.starts_with("<svg") && svg.contains("<title>a&lt;b</title>"));
 }
@@ -53,9 +54,16 @@ fn the_commands_notes_write_are_understood() {
         r"\small x", r"\texttt{int}", r"\textsf{A}",
         r"\nrightarrow", r"\nRightarrow", r"\gtrsim", r"\lesssim", r"\ngtr", r"\rightharpoondown", r"\intercal", r"{a \atop b}",
         r"\oiint", r"\triangleq", r"\enspace", r"\hspace{2em}", r"\updownarrow", r"\Uparrow", r"\Downarrow", r"\rightleftarrows",
-        r"\curvearrowright", r"\twoheadrightarrow", r"\Rsh", r"\Vdash", r"\sqsubseteq", r"\varkappa", r"\bigsqcup", r"\overleftrightarrow{AB}"] {
-        let left: Vec<String> = docstream_math::typeset(tex, true).items.into_iter()
-            .filter_map(|item| match item { docstream_math::Item::Text { text, .. } if text.starts_with('\\') => Some(text), _ => None }).collect();
-        assert!(left.is_empty(), "{tex}: {left:?}");
+        r"\curvearrowright", r"\twoheadrightarrow", r"\Rsh", r"\Vdash", r"\sqsubseteq", r"\varkappa", r"\bigsqcup", r"\overleftrightarrow{AB}",
+        r"\boxminus", r"\hspace{1.5cm}", r"\hspace*{3pt}"] {
+        assert!(docstream_math::unknown(tex).is_empty(), "{tex}: {:?}", docstream_math::unknown(tex));
+    }
+}
+
+/// Commands that are not math are kept as written, so that a note written wrongly shows it and is put right.
+#[test]
+fn commands_that_are_not_math_are_kept_as_written() {
+    for tex in [r"\Nu", r"\textmu", r"\multicolumn{2}{c}{x}", r"\hspace{wide}"] {
+        assert!(!docstream_math::unknown(tex).is_empty(), "{tex}");
     }
 }

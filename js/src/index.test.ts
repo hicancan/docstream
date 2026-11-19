@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { diagram, html, initialize, math, read, Stream } from './index.js';
+import { diagram, html, initialize, math, read, Stream, unknown } from './index.js';
 
 beforeAll(async () => { await initialize(readFileSync(new URL('../wasm/docstream_wasm_bg.wasm', import.meta.url))); });
 
@@ -23,6 +23,10 @@ describe('docstream on the web', () => {
         expect(svg.startsWith('<svg')).toBe(true);
         expect(svg).toContain('fill="currentColor"');
         expect(svg).toMatch(/vertical-align:-[\d.]+em/);
+    });
+    it('names the commands a formula uses that are not understood', () => {
+        expect(unknown('\\frac{\\pmb{\\alpha}}{2}')).toEqual([]);
+        expect(unknown('\\Nu + \\textmu')).toEqual(['\\Nu', '\\textmu']);
     });
     it('lays out Mermaid as SVG, and leaves a kind it does not know to be shown as written', () => {
         expect(diagram('graph TD\nA[开始] --> B[结束]')).toContain('开始');

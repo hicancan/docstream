@@ -25,6 +25,9 @@ pub fn typeset(tex: &str, display: bool) -> Formula {
     Formula { width: round(t.width), height: round(t.height), depth: round(t.depth), items, glyphs }
 }
 
+/// The commands a formula uses that are not understood, as written: they are drawn as written, so nothing is lost.
+pub fn unknown(tex: &str) -> Vec<String> { let mut out = Vec::new(); tex::unknown(&tex::parse(tex), &mut out); out }
+
 /// The formula as JSON, for clients that draw it themselves.
 pub fn json(tex: &str, display: bool) -> String { serde_json::to_string(&typeset(tex, display)).expect("a formula serializes") }
 

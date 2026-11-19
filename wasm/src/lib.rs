@@ -10,6 +10,10 @@ pub fn read(text: &str) -> String { serde_json::to_string(&docstream_core::read(
 #[wasm_bindgen]
 pub fn math(tex: &str, display: bool) -> String { docstream_math::svg(tex, display) }
 
+/// The commands a formula uses that are not understood, as written, one to a line; empty when all are.
+#[wasm_bindgen]
+pub fn unknown(tex: &str) -> String { docstream_math::unknown(tex).join("\n") }
+
 /// A Mermaid diagram as SVG in the colour of the text around it, or nothing for a kind not laid out.
 #[wasm_bindgen]
 pub fn diagram(source: &str) -> Option<String> { docstream_diagram::svg(source) }

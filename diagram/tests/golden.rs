@@ -57,4 +57,6 @@ fn every_diagram_is_called_something_meaningful() {
     assert_eq!((d.title.as_str(), d.description.as_deref()), ("两步", Some("先这样 再那样")));
     assert_eq!(d.items.iter().filter(|i| matches!(i, docstream_diagram::Item::Text { .. })).count(), 2, "no node is made of the accessible lines");
     assert_eq!(docstream_diagram::diagram("flowchart LR\n    A[开始] --> B[结束]").unwrap().title, "开始 → 结束");
+    let long = docstream_diagram::diagram("flowchart TD\n    A[\"心理工作站 + 易班工作室 ➔ 学生发展中心，设立运营、宣发、心理、易班四部架构\"] --> B[Student Development Center]").unwrap();
+    assert_eq!(long.title, "心理工作站 + 易班工作室 ➔ 学生发展中心，设立运营、宣发、心理、易班四部架构 → Student Development Center");
 }

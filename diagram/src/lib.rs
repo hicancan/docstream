@@ -60,8 +60,23 @@ pub fn diagram(source: &str) -> Option<Diagram> {
     let titled = body.iter().find_map(|l| l.strip_prefix("title ")).map(|t| t.trim().to_string())
         .or_else(|| rest.strip_prefix("title").map(|t| t.trim().to_string())).filter(|t| !t.is_empty());
     d.title = acc_title.or(front_title).or(titled).unwrap_or_else(|| {
+        // A label broken into lines is one phrase again: its lines are written one under another at the same place.
+        let mut phrases: Vec<(String, f32, f32)> = Vec::new();
+        for item in &d.items {
+            let Item::Text { text, x, y, .. } = item else { continue };
+            if text.trim().is_empty() { continue; }
+            match phrases.last_mut() {
+                Some((phrase, px, py)) if (*px - x).abs() < 0.2 && (y - *py - draw::LINE).abs() < 0.2 => {
+                    let spaced = phrase.ends_with(|c: char| c.is_ascii_alphanumeric()) && text.starts_with(|c: char| c.is_ascii_alphanumeric());
+                    if spaced { phrase.push(' '); }
+                    phrase.push_str(text);
+                    *py = *y;
+                }
+                _ => phrases.push((text.clone(), *x, *y)),
+            }
+        }
         let mut words: Vec<&str> = Vec::new();
-        for item in &d.items { if let Item::Text { text, .. } = item { if !text.trim().is_empty() && !words.contains(&text.as_str()) { words.push(text); } } }
+        for (phrase, _, _) in &phrases { if !words.contains(&phrase.as_str()) { words.push(phrase); } }
         let joined = words.iter().take(4).copied().collect::<Vec<_>>().join(" → ");
         if joined.chars().count() > 120 { joined.chars().take(119).chain(['…']).collect() } else { joined }
     });

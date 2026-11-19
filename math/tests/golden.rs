@@ -50,7 +50,10 @@ fn the_commands_notes_write_are_understood() {
         r"\preccurlyeq", r"\succcurlyeq", r"\bowtie", r"\Longleftrightarrow", r"\bigcirc", r"\bigtriangledown", r"\bigstar", r"\lessgtr",
         r"\lessdot", r"\gtrdot", r"\dag", r"\nmid", r"\circledast", r"\circledcirc", r"\triangleright", r"\ncong", r"\surd", r"\lll",
         r"\imath", r"\jmath", r"\lbrack x \rbrack", r"\yen", r"\AA", r"\dotsc", r"\hdots", r"\varDelta", r"\varPhi", r"\Vec{a}",
-        r"\small x", r"\texttt{int}", r"\textsf{A}"] {
+        r"\small x", r"\texttt{int}", r"\textsf{A}",
+        r"\nrightarrow", r"\nRightarrow", r"\gtrsim", r"\lesssim", r"\ngtr", r"\rightharpoondown", r"\intercal", r"{a \atop b}",
+        r"\oiint", r"\triangleq", r"\enspace", r"\hspace{2em}", r"\updownarrow", r"\Uparrow", r"\Downarrow", r"\rightleftarrows",
+        r"\curvearrowright", r"\twoheadrightarrow", r"\Rsh", r"\Vdash", r"\sqsubseteq", r"\varkappa", r"\bigsqcup", r"\overleftrightarrow{AB}"] {
         let left: Vec<String> = docstream_math::typeset(tex, true).items.into_iter()
             .filter_map(|item| match item { docstream_math::Item::Text { text, .. } if text.starts_with('\\') => Some(text), _ => None }).collect();
         assert!(left.is_empty(), "{tex}: {left:?}");

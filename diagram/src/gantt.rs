@@ -89,7 +89,7 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
             "tickInterval" => { interval = Interval::read(rest); continue; }
             "weekday" => { if let Some(day) = WEEKDAYS.iter().position(|d| rest.eq_ignore_ascii_case(d)) { week_start = day as i64; } continue; }
             "section" => { sections.push(Section { name: Some(rest.to_string()), tasks: Vec::new() }); continue; }
-            "dateFormat" | "excludes" | "includes" | "todayMarker" | "displayMode" | "accTitle" | "accDescr" => continue,
+            "dateFormat" | "excludes" | "includes" | "todayMarker" | "displayMode" => continue,
             _ => {}
         }
         let Some((name, spec)) = line.split_once(':') else { continue };

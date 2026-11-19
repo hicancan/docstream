@@ -24,7 +24,7 @@ pub fn quadrant(body: &[&str]) -> Option<Diagram> {
             "x-axis" => { x_axis = Some(axis(rest)); continue; }
             "y-axis" => { y_axis = Some(axis(rest)); continue; }
             "quadrant-1" | "quadrant-2" | "quadrant-3" | "quadrant-4" => { quarters[(word.as_bytes()[9] - b'1') as usize] = Some(unquote(rest)); continue; }
-            "classDef" | "accTitle" | "accDescr" => continue,
+            "classDef" => continue,
             _ => {}
         }
         // `Name: [x, y]`, the name perhaps quoted and followed by `:::class`, the point perhaps by its style.

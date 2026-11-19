@@ -34,7 +34,8 @@ and frames (loop, alt, opt, par); a mind map its root in the middle and its bran
 ticks on whole units of the calendar (`tickInterval` and `weekday` read), with the year once the axis runs into
 another; a quadrant chart its points named where their words cover nothing else. Labels may break lines with `<br>`
 and be set bold with `<b>`, as Mermaid allows. A diagram comes back as paths and words, or as SVG in the colour of the
-text around it. A kind not laid out is left for the client to show as written.
+text around it, with what it is called for someone who cannot see it: its `accTitle`, else its title, else the first
+words drawn in it (and `accDescr` as its description). A kind not laid out is left for the client to show as written.
 
 ## Layout
 

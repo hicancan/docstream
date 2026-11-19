@@ -16,9 +16,15 @@ pub enum Item {
     Text { x: f32, y: f32, text: String, size: f32, bold: bool },
 }
 
-/// A laid-out diagram: the rectangle that holds it (its top left need not be the origin) and what is drawn.
+/// A laid-out diagram: the rectangle that holds it (its top left need not be the origin) and what is drawn, with what
+/// it is called for someone who cannot see it, and its description when the source gives one.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct Diagram { pub x: f32, pub y: f32, pub width: f32, pub height: f32, pub items: Vec<Item> }
+pub struct Diagram {
+    pub x: f32, pub y: f32, pub width: f32, pub height: f32, pub items: Vec<Item>,
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
 
 pub const SIZE: f32 = 14.0;
 pub const LINE: f32 = SIZE * 1.4;
@@ -156,9 +162,10 @@ pub fn dot(x: f32, y: f32, radius: f32, fill: Fill) -> Item {
     Item::Path { d: Pen::new().m(x - radius, y).a(radius, radius, true, x + radius, y).a(radius, radius, true, x - radius, y).z(), fill, stroke: if fill == Fill::Solid { 0.0 } else { 1.4 }, dash: false }
 }
 
-pub fn svg(d: &Diagram, title: &str) -> String {
+pub fn svg(d: &Diagram) -> String {
     let mut out = String::new();
-    let _ = write!(out, r#"<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="{x} {y} {w} {h}" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" font-size="{SIZE}" text-anchor="middle" dominant-baseline="central" role="img"><title>{}</title>"#, escape(title), x = d.x, y = d.y, w = r(d.width), h = r(d.height));
+    let _ = write!(out, r#"<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="{x} {y} {w} {h}" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" font-size="{SIZE}" text-anchor="middle" dominant-baseline="central" role="img"><title>{}</title>"#, escape(&d.title), x = d.x, y = d.y, w = r(d.width), h = r(d.height));
+    if let Some(description) = &d.description { let _ = write!(out, "<desc>{}</desc>", escape(description)); }
     for item in &d.items {
         match item {
             Item::Path { d, fill, stroke, dash } => {

@@ -123,7 +123,7 @@ fn read_flowchart(header: &str, body: &[&str]) -> Option<Graph> {
                 }
                 "end" => { g.open.pop(); }
                 "direction" => { if g.open.is_empty() { g.dir = direction(&s["direction".len()..]).or(g.dir); } }
-                "classDef" | "class" | "style" | "linkStyle" | "click" | "accTitle" | "accDescr" => {}
+                "classDef" | "class" | "style" | "linkStyle" | "click" => {}
                 _ => chain(&mut g, s),
             }
         }
@@ -851,7 +851,7 @@ impl Bounds {
 /// The diagram as drawn, with a small margin around what it holds; its items keep their places, the view moves.
 pub(crate) fn finish(items: Vec<Item>, b: Bounds) -> Diagram {
     let margin = 4.0;
-    Diagram { x: draw::r(b.x0 - margin), y: draw::r(b.y0 - margin), width: draw::r(b.x1 - b.x0 + 2.0 * margin), height: draw::r(b.y1 - b.y0 + 2.0 * margin), items }
+    Diagram { x: draw::r(b.x0 - margin), y: draw::r(b.y0 - margin), width: draw::r(b.x1 - b.x0 + 2.0 * margin), height: draw::r(b.y1 - b.y0 + 2.0 * margin), items, title: String::new(), description: None }
 }
 
 #[cfg(test)]

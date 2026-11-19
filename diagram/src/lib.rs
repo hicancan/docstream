@@ -19,10 +19,22 @@ pub const KINDS: [&str; 8] = ["flowchart", "sequenceDiagram", "stateDiagram", "m
 pub fn diagram(source: &str) -> Option<Diagram> {
     let mut lines: Vec<&str> = Vec::new();
     let mut front = false;
+    let mut front_title = None;
+    // What it is called and what it shows, for someone who cannot see it: read here, so no kind takes them for content.
+    let mut acc_title = None;
+    let mut acc_descr: Option<Vec<String>> = None;
+    let mut in_descr = false;
     for (i, raw) in source.lines().enumerate() {
         let line = raw.trim();
         if line == "---" && (i == 0 || front) { front = !front; continue; }
-        if front { continue; }
+        if front { if let Some(t) = line.strip_prefix("title:") { front_title = Some(t.trim().trim_matches('"').to_string()); } continue; }
+        if in_descr { if line == "}" { in_descr = false; } else if !line.is_empty() { acc_descr.get_or_insert_with(Vec::new).push(line.to_string()); } continue; }
+        if let Some(t) = line.strip_prefix("accTitle") { acc_title = Some(t.trim_start_matches([':', ' ']).trim().to_string()).filter(|t| !t.is_empty()); continue; }
+        if let Some(t) = line.strip_prefix("accDescr") {
+            let t = t.trim_start_matches([':', ' ']).trim();
+            if t == "{" { in_descr = true; } else if !t.is_empty() { acc_descr = Some(vec![t.to_string()]); }
+            continue;
+        }
         // Indentation is kept: a mind map's outline is written in it.
         let line = match raw.find("%%") { Some(at) => raw[..at].trim_end(), None => raw.trim_end() };
         if !line.trim().is_empty() { lines.push(line); }
@@ -33,7 +45,7 @@ pub fn diagram(source: &str) -> Option<Diagram> {
     let rest = header[kind.len()..].trim();
     let body: Vec<&str> = raw.iter().map(|l| l.trim()).collect();
     let body = &body[..];
-    match kind {
+    let mut d = match kind {
         "graph" | "flowchart" | "flowchart-elk" => flow::flowchart(rest, body),
         "stateDiagram" | "stateDiagram-v2" => flow::states(body),
         "sequenceDiagram" => sequence::sequence(body),
@@ -43,15 +55,22 @@ pub fn diagram(source: &str) -> Option<Diagram> {
         "pie" => pie::pie(rest, body),
         "quadrantChart" => quadrant::quadrant(body),
         _ => None,
-    }
+    }?;
+    // What it is called: the accessible title the source gives, else its title, else the first words drawn in it.
+    let titled = body.iter().find_map(|l| l.strip_prefix("title ")).map(|t| t.trim().to_string())
+        .or_else(|| rest.strip_prefix("title").map(|t| t.trim().to_string())).filter(|t| !t.is_empty());
+    d.title = acc_title.or(front_title).or(titled).unwrap_or_else(|| {
+        let mut words: Vec<&str> = Vec::new();
+        for item in &d.items { if let Item::Text { text, .. } = item { if !text.trim().is_empty() && !words.contains(&text.as_str()) { words.push(text); } } }
+        let joined = words.iter().take(4).copied().collect::<Vec<_>>().join(" → ");
+        if joined.chars().count() > 120 { joined.chars().take(119).chain(['…']).collect() } else { joined }
+    });
+    d.description = acc_descr.map(|lines| lines.join(" "));
+    Some(d)
 }
 
 /// The diagram as JSON, for clients that draw it themselves.
 pub fn json(source: &str) -> Option<String> { diagram(source).map(|d| serde_json::to_string(&d).expect("a diagram serializes")) }
 
 /// The diagram as SVG in pixels of 14px text, in the colour of the text around it.
-pub fn svg(source: &str) -> Option<String> {
-    let d = diagram(source)?;
-    let title = source.lines().find(|l| !l.trim().is_empty()).unwrap_or("").trim();
-    Some(draw::svg(&d, title))
-}
+pub fn svg(source: &str) -> Option<String> { diagram(source).map(|d| draw::svg(&d)) }

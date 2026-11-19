@@ -14,8 +14,9 @@ pub fn read(text: &str) -> Vec<Block> { read_ranged(text).into_iter().map(|(bloc
 
 /// Every top-level block with the span of the text it was read from.
 pub(crate) fn read_ranged(text: &str) -> Vec<(Block, Range<usize>)> {
-    let (text, shifts) = brackets(text);
-    let original = |at: usize| at + shifts.iter().take_while(|&&shift| shift <= at).count();
+    let (text, marks) = normalize(text);
+    // A place in the read text, found again in the text as written.
+    let original = |at: usize| marks.iter().take_while(|&&(new, _)| new <= at).last().map_or(at, |&(new, old)| old + (at - new));
     let mut reader = Reader { events: Parser::new_ext(&text, options()).into_offset_iter().collect(), at: 0 };
     let mut blocks = Vec::new();
     while reader.at < reader.events.len() {
@@ -26,38 +27,80 @@ pub(crate) fn read_ranged(text: &str) -> Vec<(Block, Range<usize>)> {
     blocks
 }
 
-/// Math as models and LaTeX write it, `\(…\)` inline and `\[…\]` displayed, read as `$…$` and `$$…$$` are: CommonMark
-/// would otherwise take each backslash as an escape and lose the formula. Only pairs that close are math; code spans
-/// and fenced code are left as written, and so is a backslash itself escaped (`\\(`). Each `\(` and `\)` becomes one
-/// byte shorter: the places in the new text after which a byte went are returned, to find the text's own places again.
-fn brackets(text: &str) -> (String, Vec<usize>) {
-    if !text.contains("\\(") && !text.contains("\\[") { return (text.to_string(), Vec::new()); }
+/// Math as GitHub, Typora, LaTeX and models write it, made into what CommonMark reads:
+///
+/// - `$$` starting a line opens a block of math that the `$$` ending a later line closes, as GitHub and Typora read it.
+///   Its lines are TeX, not Markdown: a line of `=` in a derivation is no heading, a `- ` no list. It is read as a fence
+///   written `math`, in a quote or list as much as at the top.
+/// - `\(…\)` inline and `\[…\]` displayed are read as `$…$` and `$$…$$`; CommonMark would otherwise take each backslash
+///   as an escape and lose the formula.
+///
+/// Only what closes is math; fenced code, code spans and an escaped backslash (`\\(`) stay as written. The places
+/// where the read text and the written one part are returned as (place read, place written), to find blocks again in
+/// the text as written.
+fn normalize(text: &str) -> (String, Vec<(usize, usize)>) {
+    if !text.contains("$$") && !text.contains("\\(") && !text.contains("\\[") { return (text.to_string(), Vec::new()); }
     let bytes = text.as_bytes();
-    let mut out = String::with_capacity(text.len());
-    let mut shifts = Vec::new();
+    let mut out = String::with_capacity(text.len() + 64);
+    let mut marks = Vec::new();
     let mut i = 0;
     let mut line_start = true;
+    let prefix_of = |line: &str| line.len() - line.trim_start_matches([' ', '\t', '>']).len();
+    let line_of = |from: &str| from.find('\n').map_or(from.len(), |n| n + 1);
     while i < bytes.len() {
-        // A fenced code block, from its fence to the fence that closes it, or to the end.
         if line_start {
             let line = &text[i..];
-            // Inside a quote too: the fence after its `>` marks.
+            // A fenced code block, from its fence to the fence that closes it, or to the end; inside a quote too.
             let rest = line.trim_start_matches([' ', '>']);
             let indent = line.len() - line.trim_start_matches(' ').len();
             if indent < 4 && (rest.starts_with("```") || rest.starts_with("~~~")) {
                 let mark = &rest[..3];
-                let end = line.find('\n').map(|n| n + 1).unwrap_or(line.len());
-                let mut close = end;
+                let mut close = line_of(line);
                 loop {
                     let next = &line[close..];
                     if next.is_empty() { break; }
-                    let len = next.find('\n').map(|n| n + 1).unwrap_or(next.len());
-                    close += len;
+                    close += line_of(next);
                     if next.trim_start_matches([' ', '>']).starts_with(mark) { break; }
                 }
                 out.push_str(&line[..close]);
                 i += close;
                 continue;
+            }
+            // A block of math: `$$` starting the line, closed by `$$` ending a later line before any blank one.
+            let prefix = prefix_of(line);
+            let first = &line[..line_of(line)];
+            let opened = first[prefix..].trim_end();
+            if opened.starts_with("$$") && !opened[2..].contains("$$") {
+                let mut end = first.len();
+                let mut closing = None;
+                loop {
+                    let next = &line[end..];
+                    if next.is_empty() { break; }
+                    let len = line_of(next);
+                    let this = &next[..len];
+                    let content = this[prefix_of(this)..].trim_end();
+                    if content.is_empty() { break; }
+                    if content.ends_with("$$") && !content.ends_with("\\$$") { closing = Some((end, len)); break; }
+                    end += len;
+                }
+                if let Some((at, len)) = closing {
+                    let lead = &line[..prefix];
+                    out.push_str(lead); out.push_str("```math\n");
+                    let after = opened[2..].trim();
+                    if !after.is_empty() { out.push_str(lead); out.push_str(after); out.push('\n'); }
+                    marks.push((out.len(), i + first.len()));
+                    out.push_str(&line[first.len()..at]);
+                    let last = &line[at..at + len];
+                    let p = prefix_of(last);
+                    let tex = last[p..].trim_end();
+                    let tex = tex[..tex.len() - 2].trim_end();
+                    if !tex.is_empty() { out.push_str(&last[..p]); out.push_str(tex); out.push('\n'); }
+                    out.push_str(&last[..p]); out.push_str("```");
+                    if last.ends_with('\n') { out.push('\n'); }
+                    i += at + len;
+                    marks.push((out.len(), i));
+                    continue;
+                }
             }
         }
         let c = bytes[i];
@@ -84,15 +127,13 @@ fn brackets(text: &str) -> (String, Vec<usize>) {
                     let inside = &text[i + 2..];
                     let limit = inside.find("\n\n").unwrap_or(inside.len());
                     if let Some(end) = inside[..limit].find(close) {
-                        let tex = &inside[..end];
-                        if open == b'(' {
-                            out.push('$'); shifts.push(out.len());
-                            out.push_str(tex);
-                            out.push('$'); shifts.push(out.len());
-                        } else {
-                            out.push_str("$$"); out.push_str(tex); out.push_str("$$");
-                        }
+                        let mark = if open == b'(' { "$" } else { "$$" };
+                        out.push_str(mark);
+                        marks.push((out.len(), i + 2));
+                        out.push_str(&inside[..end]);
+                        out.push_str(mark);
                         i += 2 + end + 2;
+                        marks.push((out.len(), i));
                         line_start = false;
                         continue;
                     }
@@ -105,7 +146,7 @@ fn brackets(text: &str) -> (String, Vec<usize>) {
         line_start = ch == '\n';
         i += ch.len_utf8().max(1);
     }
-    (out, shifts)
+    (out, marks)
 }
 
 struct Reader<'a> { events: Vec<(Event<'a>, Range<usize>)>, at: usize }

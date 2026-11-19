@@ -49,3 +49,23 @@ fn brackets_stream_as_they_are_read() {
     let ended: Vec<Block> = stream.finish().blocks.into_iter().map(|keyed| keyed.block).collect();
     assert_eq!(ended, read(text));
 }
+
+/// A block of math is TeX to its closing `$$`: a line of `=` in it is no heading, a `- ` no list, in a quote as well.
+#[test]
+fn a_block_of_math_is_read_to_its_close() {
+    let text = "推导：\n\n$$\nAB=\\begin{pmatrix}a\\\\b\\end{pmatrix}\n=\n- c\n$$\n\n> $$ x\n> = y $$\n\n收尾 $$ 不是块\n";
+    let blocks = read(text);
+    assert_eq!(maths(&blocks), [
+        ("AB=\\begin{pmatrix}a\\\\b\\end{pmatrix}\n=\n- c".into(), true), ("x\n= y".into(), true),
+    ]);
+    assert!(blocks.iter().all(|b| !matches!(b, Block::Heading { .. } | Block::List { .. })), "{blocks:?}");
+    let json = serde_json::to_string(&blocks).unwrap();
+    assert!(json.contains("收尾 $$ 不是块"), "{json}");
+}
+
+/// A `$$` that never closes, or meets a blank line first, opens nothing.
+#[test]
+fn an_unclosed_block_of_math_opens_nothing() {
+    let blocks = read("$$\na\n\n正文还在。\n");
+    assert!(maths(&blocks).is_empty(), "{blocks:?}");
+}

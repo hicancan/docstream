@@ -65,7 +65,9 @@ fn untag(text: &str) -> (String, bool) {
             if chars.get(j) == Some(&'/') { j += 1; }
             let name = j;
             while chars.get(j).is_some_and(|c| c.is_ascii_alphabetic()) { j += 1; }
-            if j > name && chars.get(j) == Some(&'>') { i = j + 1; continue; }
+            let tag: String = chars[name..j].iter().collect();
+            let simple = matches!(tag.to_ascii_lowercase().as_str(), "b" | "strong" | "i" | "em" | "u" | "s" | "small" | "sup" | "sub" | "span" | "code");
+            if simple && chars.get(j) == Some(&'>') && chars.get(i.wrapping_sub(1)) != Some(&'<') { i = j + 1; continue; }
         }
         out.push(chars[i]);
         i += 1;

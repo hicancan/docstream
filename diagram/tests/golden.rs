@@ -32,7 +32,7 @@ fn every_prefix_of_every_case_lays_out() {
 
 #[test]
 fn a_kind_not_laid_out_is_left_to_be_shown_as_written() {
-    assert!(docstream_diagram::diagram("classDiagram\nclass Animal").is_none());
+    assert!(docstream_diagram::diagram("gitGraph\ncommit").is_none());
     assert!(docstream_diagram::diagram("journey\ntitle My day").is_none());
     assert!(docstream_diagram::svg("graph TD\nA-->B").unwrap().starts_with("<svg"));
 }

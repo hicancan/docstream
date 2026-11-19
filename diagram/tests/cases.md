@@ -263,3 +263,52 @@ flowchart LR
     T2022["<b>2022 · 肇始与合流</b><br/>心理工作站 + 易班工作室 ➔ 学生发展中心"] --> T2023["<strong>2023—2024</strong><br/>大草坪音乐诊疗 · <i>第一次</i>全员集中学习"]
     T2023 --> W["wasm-search 端侧检索<br/>(< 1 ms BM25 打分与高亮)"]
 ```
+
+```mermaid
+classDiagram
+    class DeviceSet {
+        <<interface>>
+        +setDevice()
+    }
+    class ConcreteSvc {
+        -int state
+        +setDevice()
+    }
+    DeviceSet <|.. ConcreteSvc : 实现
+    Client "1" --> "*" DeviceSet : uses
+```
+
+```mermaid
+erDiagram
+    STORE["商店"] {
+        string SID "商店编号(PK)"
+        string SName "商店名"
+    }
+    PRODUCT["商品"] {
+        string PID "商品编号(PK)"
+        float Price "单价"
+    }
+    STORE ||--o{ PRODUCT : "销售(1:N)"
+```
+
+```mermaid
+xychart-beta
+    title "变更成本对比"
+    x-axis ["需求", "设计", "编码", "测试", "维护"]
+    y-axis "成本" 0 --> 100
+    line "传统模型" [10, 25, 45, 75, 95]
+    line "Agile" [10, 15, 18, 20, 22]
+```
+
+```mermaid
+gantt
+    title 装载-使用型冒险时序
+    dateFormat X
+    axisFormat %s
+    section LOAD
+    IF   :done, 0, 1
+    MEM  :crit, 3, 4
+    section ADD
+    IF   :1, 2
+    EX   :crit, 3, 4
+```

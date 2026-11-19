@@ -76,6 +76,7 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
     let mut title = None;
     let mut axis = None;
     let mut interval: Option<Interval> = None;
+    let mut numeric = false;
     // Weeks begin on Sunday unless the chart says otherwise, as in Mermaid.
     let mut week_start = 0i64;
     let mut sections = vec![Section { name: None, tasks: Vec::new() }];
@@ -88,10 +89,13 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
             "axisFormat" => { axis = Some(rest.to_string()); continue; }
             "tickInterval" => { interval = Interval::read(rest); continue; }
             "weekday" => { if let Some(day) = WEEKDAYS.iter().position(|d| rest.eq_ignore_ascii_case(d)) { week_start = day as i64; } continue; }
+            "dateFormat" => { if rest.eq_ignore_ascii_case("x") { numeric = true; } continue; }
             "section" => { sections.push(Section { name: Some(rest.to_string()), tasks: Vec::new() }); continue; }
-            "dateFormat" | "excludes" | "includes" | "todayMarker" | "displayMode" => continue,
+            "excludes" | "includes" | "todayMarker" | "displayMode" => continue,
             _ => {}
         }
+        let read_at = |text: &str| if numeric { text.trim().parse::<i64>().ok() } else { moment(text) };
+        let read_len = |text: &str| if numeric { duration(text).or_else(|| text.trim().parse::<i64>().ok()) } else { duration(text) };
         let Some((name, spec)) = line.split_once(':') else { continue };
         let mut parts: Vec<&str> = spec.split(',').map(str::trim).filter(|p| !p.is_empty()).collect();
         let (mut done, mut active, mut crit, mut milestone) = (false, false, false, false);
@@ -100,7 +104,7 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
             parts.remove(0);
         }
         // What is left: [id,] [start,] end-or-while. An id is a word that is neither a moment, a while nor `after`.
-        let id = if parts.len() >= 2 && moment(parts[0]).is_none() && duration(parts[0]).is_none() && !parts[0].starts_with("after ") {
+        let id = if parts.len() >= 2 && read_at(parts[0]).is_none() && duration(parts[0]).is_none() && !parts[0].starts_with("after ") {
             Some(parts.remove(0).to_string())
         } else { None };
         let after = |text: &str| -> Option<Minute> {
@@ -109,8 +113,15 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
         };
         // A task whose times cannot be read is left out; the rest of the chart still stands.
         let times = match parts[..] {
-            [only] => last_end.and_then(|start| Some((start, duration(only).map(|d| start + d).or_else(|| moment(only))?))),
-            [from, to, ..] => moment(from).or_else(|| after(from)).and_then(|start| Some((start, duration(to).map(|d| start + d).or_else(|| moment(to))?))),
+            [only] => last_end.and_then(|start| Some((start, read_len(only).map(|d| start + d).or_else(|| read_at(only))?))),
+            [from, to, ..] => read_at(from).or_else(|| after(from)).and_then(|start| {
+                let end = if numeric {
+                    duration(to).map(|d| start + d).or_else(|| read_at(to))?
+                } else {
+                    duration(to).map(|d| start + d).or_else(|| moment(to))?
+                };
+                Some((start, end))
+            }),
             [] if milestone => last_end.map(|start| (start, start)),
             [] => None,
         };
@@ -124,13 +135,28 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
     let first = sections.iter().flat_map(|s| &s.tasks).map(|t| t.start).min()?;
     let last = sections.iter().flat_map(|s| &s.tasks).map(|t| t.end).max()?.max(first + 1);
 
-    // The time axis: ticks on whole units of the calendar, as many as the chart asks for or six to ten of them,
-    // each with room for its time.
+    // The time axis: ticks on whole units of the calendar (or whole numbers for `dateFormat X`), six to ten of them.
     let span = last - first;
-    let interval = interval.unwrap_or_else(|| Interval::fitting(span));
-    let ticks = interval.ticks(first, last, week_start);
-    let format = axis.clone().unwrap_or_else(|| interval.format(first, last).to_string());
-    let tick_room = ticks.iter().map(|&t| width(&format_tick(t, &format), 12.0)).fold(0.0, f32::max) + 24.0;
+    let (ticks, labels): (Vec<Minute>, Vec<String>) = if numeric {
+        let mut step = 1i64;
+        for s in [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000] {
+            if span / s <= 10 { step = s; break; }
+            step = s * 10;
+        }
+        let fmt = axis.as_deref().unwrap_or("%s");
+        let mut t = first + (step - first.rem_euclid(step)) % step;
+        let mut ts = Vec::new();
+        while t <= last { ts.push(t); t += step; }
+        let ls = ts.iter().map(|&v| if fmt.contains("%s") { fmt.replace("%s", &v.to_string()) } else { v.to_string() }).collect();
+        (ts, ls)
+    } else {
+        let interval = interval.unwrap_or_else(|| Interval::fitting(span));
+        let ts = interval.ticks(first, last, week_start);
+        let format = axis.clone().unwrap_or_else(|| interval.format(first, last).to_string());
+        let ls = ts.iter().map(|&t| format_tick(t, &format)).collect();
+        (ts, ls)
+    };
+    let tick_room = labels.iter().map(|l| width(l, 12.0)).fold(0.0, f32::max) + 24.0;
     let plot = (ticks.len().max(2) as f32 * tick_room.max(64.0)).clamp(360.0, 900.0);
     let scale = plot / span as f32;
 
@@ -177,10 +203,10 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
     // Ticks and their times, under the bars, and a faint line down from each.
     let bottom = y + 4.0;
     items.push(Item::Path { d: Pen::new().m(left, bottom).l(left + plot, bottom).done(), fill: Fill::None, stroke: 1.0, dash: false });
-    for &tick in &ticks {
+    for (&tick, text) in ticks.iter().zip(labels) {
         let x = x_of(tick);
         items.push(Item::Path { d: Pen::new().m(x, top).l(x, bottom + 4.0).done(), fill: Fill::None, stroke: 0.6, dash: true });
-        items.push(Item::Text { x: r(x), y: r(bottom + 4.0 + LINE / 2.0 + 2.0), text: format_tick(tick, &format), size: 12.0, bold: false });
+        items.push(Item::Text { x: r(x), y: r(bottom + 4.0 + LINE / 2.0 + 2.0), text, size: 12.0, bold: false });
     }
     let end_y = bottom + 4.0 + LINE + 4.0;
     b.add(0.0, 0.0); b.add(left + plot + 24.0, end_y);

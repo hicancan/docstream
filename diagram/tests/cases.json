@@ -4601,5 +4601,800 @@
       }
     ],
     "title": "2022 · 肇始与合流心理工作站 + 易班工作室 ➔ 学生发展中心 → 2023—2024大草坪音乐诊疗 · 第一次全员集中学习 → wasm-search 端侧检索(< 1 ms BM25 打分与高亮)"
+  },
+  {
+    "x": -61.4,
+    "y": -4.0,
+    "width": 122.8,
+    "height": 356.8,
+    "items": [
+      {
+        "type": "path",
+        "d": "M0 200.4C0 200.4 0 200.4 0 210.4M0 234C0 244 0 244 0 254",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": true
+      },
+      {
+        "type": "path",
+        "d": "M0 190.4L5.5 200.4L-5.5 200.4Z",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 222.2,
+        "text": "实现",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M0 32C0 42 0 42 0 52M0 75.6C0 85.6 0 85.6 0 95.6",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M-5 86.6L0 95.6L5 86.6",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": -10.2,
+        "y": 48.0,
+        "text": "1",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": 10.2,
+        "y": 79.6,
+        "text": "*",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 63.8,
+        "text": "uses",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M-54.4 95.6L54.4 95.6A3 3 0 0 1 57.4 98.6L57.4 187.4A3 3 0 0 1 54.4 190.4L-54.4 190.4A3 3 0 0 1 -57.4 187.4L-57.4 98.6A3 3 0 0 1 -54.4 95.6Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 111.4,
+        "text": "<<interface>>",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 131.0,
+        "text": "DeviceSet",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "path",
+        "d": "M-57.4 146.8L57.4 146.8",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M-57.4 158.8L57.4 158.8",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": -5.1,
+        "y": 174.6,
+        "text": "+setDevice()",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M-51.5 254L51.5 254A3 3 0 0 1 54.5 257L54.5 345.8A3 3 0 0 1 51.5 348.8L-51.5 348.8A3 3 0 0 1 -54.5 345.8L-54.5 257A3 3 0 0 1 -51.5 254Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 269.8,
+        "text": "ConcreteSvc",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "path",
+        "d": "M-54.5 285.6L54.5 285.6",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": -13.5,
+        "y": 301.4,
+        "text": "-int state",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M-54.5 317.2L54.5 317.2",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": -2.1,
+        "y": 333.0,
+        "text": "+setDevice()",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M-37 0L37 0A3 3 0 0 1 40 3L40 29A3 3 0 0 1 37 32L-37 32A3 3 0 0 1 -40 29L-40 3A3 3 0 0 1 -37 0Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 15.8,
+        "text": "Client",
+        "size": 14.0,
+        "bold": true
+      }
+    ],
+    "title": "实现 → 1 → * → uses"
+  },
+  {
+    "x": -100.6,
+    "y": -4.0,
+    "width": 201.2,
+    "height": 237.2,
+    "items": [
+      {
+        "type": "path",
+        "d": "M0 82.8C0 92.8 0 92.8 0 102.8M0 126.4C0 136.4 0 136.4 0 146.4",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M0 137.4L-5.5 146.4M0 137.4L5.5 146.4",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M-3.2 133.4A3.2 3.2 0 0 1 3.2 133.4A3.2 3.2 0 0 1 -3.2 133.4Z",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M5.5 88.8L-5.5 88.8M5.5 92.8L-5.5 92.8",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 114.6,
+        "text": "销售(1:N)",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M-93.6 0L93.6 0A3 3 0 0 1 96.6 3L96.6 79.8A3 3 0 0 1 93.6 82.8L-93.6 82.8A3 3 0 0 1 -96.6 79.8L-96.6 3A3 3 0 0 1 -93.6 0Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 15.8,
+        "text": "商店",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "path",
+        "d": "M-96.6 31.6L96.6 31.6",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": -2.0,
+        "y": 47.4,
+        "text": "string SID (商店编号(PK))",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": -14.0,
+        "y": 67.0,
+        "text": "string SName (商店名)",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M-93.6 146.4L93.6 146.4A3 3 0 0 1 96.6 149.4L96.6 226.2A3 3 0 0 1 93.6 229.2L-93.6 229.2A3 3 0 0 1 -96.6 226.2L-96.6 149.4A3 3 0 0 1 -93.6 146.4Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 0.0,
+        "y": 162.2,
+        "text": "商品",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "path",
+        "d": "M-96.6 178L96.6 178",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": -2.0,
+        "y": 193.8,
+        "text": "string PID (商品编号(PK))",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": -30.8,
+        "y": 213.4,
+        "text": "float Price (单价)",
+        "size": 14.0,
+        "bold": false
+      }
+    ],
+    "title": "销售(1:N) → 商店 → string SID (商店编号(PK)) → string SName (商店名)"
+  },
+  {
+    "x": -4.0,
+    "y": -4.0,
+    "width": 401.4,
+    "height": 327.6,
+    "items": [
+      {
+        "type": "text",
+        "x": 217.4,
+        "y": 17.8,
+        "text": "变更成本对比",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 49.4,
+        "y": 37.6,
+        "text": "成本",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M57.4 271.6L377.4 271.6",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 46.2,
+        "y": 271.6,
+        "text": "0",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M57.4 227.6L377.4 227.6",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 43.0,
+        "y": 227.6,
+        "text": "20",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M57.4 183.6L377.4 183.6",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 43.0,
+        "y": 183.6,
+        "text": "40",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M57.4 139.6L377.4 139.6",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 43.0,
+        "y": 139.6,
+        "text": "60",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M57.4 95.6L377.4 95.6",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 43.0,
+        "y": 95.6,
+        "text": "80",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M57.4 51.6L377.4 51.6",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 39.7,
+        "y": 51.6,
+        "text": "100",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M57.4 51.6L57.4 271.6L377.4 271.6",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M89.4 271.6L89.4 275.6",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 89.4,
+        "y": 285.6,
+        "text": "需求",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M153.4 271.6L153.4 275.6",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 153.4,
+        "y": 285.6,
+        "text": "设计",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M217.4 271.6L217.4 275.6",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 217.4,
+        "y": 285.6,
+        "text": "编码",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M281.4 271.6L281.4 275.6",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 281.4,
+        "y": 285.6,
+        "text": "测试",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M345.4 271.6L345.4 275.6",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 345.4,
+        "y": 285.6,
+        "text": "维护",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M89.4 249.6L153.4 216.6L217.4 172.6L281.4 106.6L345.4 62.6",
+        "fill": "none",
+        "stroke": 2.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M85.8 249.6A3.6 3.6 0 0 1 93 249.6A3.6 3.6 0 0 1 85.8 249.6Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M149.8 216.6A3.6 3.6 0 0 1 157 216.6A3.6 3.6 0 0 1 149.8 216.6Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M213.8 172.6A3.6 3.6 0 0 1 221 172.6A3.6 3.6 0 0 1 213.8 172.6Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M277.8 106.6A3.6 3.6 0 0 1 285 106.6A3.6 3.6 0 0 1 277.8 106.6Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M341.8 62.6A3.6 3.6 0 0 1 349 62.6A3.6 3.6 0 0 1 341.8 62.6Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M89.4 249.6L153.4 238.6L217.4 232L281.4 227.6L345.4 223.2",
+        "fill": "none",
+        "stroke": 1.6,
+        "dash": true
+      },
+      {
+        "type": "path",
+        "d": "M85.8 249.6A3.6 3.6 0 0 1 93 249.6A3.6 3.6 0 0 1 85.8 249.6Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M149.8 238.6A3.6 3.6 0 0 1 157 238.6A3.6 3.6 0 0 1 149.8 238.6Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M213.8 232A3.6 3.6 0 0 1 221 232A3.6 3.6 0 0 1 213.8 232Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M277.8 227.6A3.6 3.6 0 0 1 285 227.6A3.6 3.6 0 0 1 277.8 227.6Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M341.8 223.2A3.6 3.6 0 0 1 349 223.2A3.6 3.6 0 0 1 341.8 223.2Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M143 303.6L163 303.6",
+        "fill": "none",
+        "stroke": 2.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M149.8 303.6A3.2 3.2 0 0 1 156.2 303.6A3.2 3.2 0 0 1 149.8 303.6Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 193.0,
+        "y": 303.6,
+        "text": "传统模型",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M237 303.6L257 303.6",
+        "fill": "none",
+        "stroke": 1.6,
+        "dash": true
+      },
+      {
+        "type": "path",
+        "d": "M243.8 303.6A3.2 3.2 0 0 1 250.2 303.6A3.2 3.2 0 0 1 243.8 303.6Z",
+        "fill": "soft",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 276.4,
+        "y": 303.6,
+        "text": "Agile",
+        "size": 12.0,
+        "bold": false
+      }
+    ],
+    "title": "\"变更成本对比\""
+  },
+  {
+    "x": -4.0,
+    "y": -4.0,
+    "width": 443.8,
+    "height": 248.4,
+    "items": [
+      {
+        "type": "text",
+        "x": 205.9,
+        "y": 9.8,
+        "text": "装载-使用型冒险时序",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 17.9,
+        "y": 41.4,
+        "text": "LOAD",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 30.9,
+        "y": 70.2,
+        "text": "IF",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M55.8 60.2L137.8 60.2A4 4 0 0 1 141.8 64.2L141.8 76.2A4 4 0 0 1 137.8 80.2L55.8 80.2A4 4 0 0 1 51.8 76.2L51.8 64.2A4 4 0 0 1 55.8 60.2Z",
+        "fill": "none",
+        "stroke": 1.2,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 23.6,
+        "y": 100.2,
+        "text": "MEM",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M325.8 90.2L407.8 90.2A4 4 0 0 1 411.8 94.2L411.8 106.2A4 4 0 0 1 407.8 110.2L325.8 110.2A4 4 0 0 1 321.8 106.2L321.8 94.2A4 4 0 0 1 325.8 90.2Z",
+        "fill": "soft",
+        "stroke": 2.4,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 13.4,
+        "y": 131.0,
+        "text": "ADD",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 30.9,
+        "y": 159.8,
+        "text": "IF",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M145.8 149.8L227.8 149.8A4 4 0 0 1 231.8 153.8L231.8 165.8A4 4 0 0 1 227.8 169.8L145.8 169.8A4 4 0 0 1 141.8 165.8L141.8 153.8A4 4 0 0 1 145.8 149.8Z",
+        "fill": "soft",
+        "stroke": 1.2,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 30.9,
+        "y": 189.8,
+        "text": "EX",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M325.8 179.8L407.8 179.8A4 4 0 0 1 411.8 183.8L411.8 195.8A4 4 0 0 1 407.8 199.8L325.8 199.8A4 4 0 0 1 321.8 195.8L321.8 183.8A4 4 0 0 1 325.8 179.8Z",
+        "fill": "soft",
+        "stroke": 2.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M51.8 212.8L411.8 212.8",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M51.8 29.6L51.8 216.8",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 51.8,
+        "y": 228.6,
+        "text": "0",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M141.8 29.6L141.8 216.8",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 141.8,
+        "y": 228.6,
+        "text": "1",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M231.8 29.6L231.8 216.8",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 231.8,
+        "y": 228.6,
+        "text": "2",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M321.8 29.6L321.8 216.8",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 321.8,
+        "y": 228.6,
+        "text": "3",
+        "size": 12.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M411.8 29.6L411.8 216.8",
+        "fill": "none",
+        "stroke": 0.6,
+        "dash": true
+      },
+      {
+        "type": "text",
+        "x": 411.8,
+        "y": 228.6,
+        "text": "4",
+        "size": 12.0,
+        "bold": false
+      }
+    ],
+    "title": "装载-使用型冒险时序"
   }
 ]

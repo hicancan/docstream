@@ -4,40 +4,41 @@ use crate::draw::{self, arrowhead, cross, dot, label, lines_size, rect, wrap, Di
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Shape { Rect, Round, Stadium, Subroutine, Cylinder, Circle, Diamond, Hexagon, Lean, Asym, Start, End, Space }
+pub(crate) enum Shape { Rect, Round, Stadium, Subroutine, Cylinder, Circle, Diamond, Hexagon, Lean, Asym, Start, End, Space }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Line { Solid, Dotted, Thick, Invisible }
+pub(crate) enum Line { Solid, Dotted, Thick, Invisible }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Head { None, Arrow, Circle, Cross }
+pub(crate) enum Head { None, Arrow, Open, Triangle, Diamond, FilledDiamond, Circle, Cross, ErOne, ErZeroOne, ErMany, ErZeroMany }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Dir { Down, Up, Right, Left }
+pub(crate) enum Dir { Down, Up, Right, Left }
 
 /// A node. `home` is the innermost subgraph it was first written in: a node belongs to one subgraph, as in Mermaid.
 /// `named` is whether it was given text of its own; a bare name that is also a subgraph's id names that subgraph.
-struct Node { id: String, text: String, shape: Shape, home: Option<usize>, named: bool }
+/// `sections`, when non-empty, draws a multi-compartment box (used by class and ER diagrams).
+pub(crate) struct Node { pub id: String, pub text: String, pub shape: Shape, pub home: Option<usize>, pub named: bool, pub sections: Vec<Vec<String>> }
 
 /// Where an edge begins or ends: at a node, or at the box of a subgraph.
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum End { Node(usize), Cluster(usize) }
+pub(crate) enum End { Node(usize), Cluster(usize) }
 
-struct Edge { from: End, to: End, label: String, line: Line, head: Head, tail: Head }
+pub(crate) struct Edge { pub from: End, pub to: End, pub label: String, pub from_label: String, pub to_label: String, pub line: Line, pub head: Head, pub tail: Head }
 
 /// A subgraph: a box around what it holds, inside its `parent`. What it holds is every node whose home is it or
 /// a subgraph inside it.
-struct Cluster { id: String, title: String, parent: Option<usize> }
+pub(crate) struct Cluster { id: String, title: String, parent: Option<usize> }
 
 #[derive(Default)]
-struct Graph { nodes: Vec<Node>, edges: Vec<Edge>, clusters: Vec<Cluster>, index: HashMap<String, usize>, dir: Option<Dir>, open: Vec<usize> }
+pub(crate) struct Graph { pub nodes: Vec<Node>, pub edges: Vec<Edge>, clusters: Vec<Cluster>, index: HashMap<String, usize>, pub dir: Option<Dir>, open: Vec<usize> }
 
 impl Graph {
-    fn node(&mut self, id: &str, text: Option<String>, shape: Option<Shape>) -> usize {
+    pub(crate) fn node(&mut self, id: &str, text: Option<String>, shape: Option<Shape>) -> usize {
         let at = match self.index.get(id) {
             Some(&at) => at,
             None => {
-                self.nodes.push(Node { id: id.to_string(), text: id.to_string(), shape: Shape::Rect, home: None, named: false });
+                self.nodes.push(Node { id: id.to_string(), text: id.to_string(), shape: Shape::Rect, home: None, named: false, sections: Vec::new() });
                 self.index.insert(id.to_string(), self.nodes.len() - 1);
                 self.nodes.len() - 1
             }
@@ -48,8 +49,8 @@ impl Graph {
         at
     }
 
-    fn edge(&mut self, from: usize, to: usize, label: String, line: Line, head: Head, tail: Head) {
-        self.edges.push(Edge { from: End::Node(from), to: End::Node(to), label, line, head, tail });
+    pub(crate) fn edge(&mut self, from: usize, to: usize, label: String, line: Line, head: Head, tail: Head) {
+        self.edges.push(Edge { from: End::Node(from), to: End::Node(to), label, from_label: String::new(), to_label: String::new(), line, head, tail });
     }
 
     fn open_cluster(&mut self, id: String, title: String) {
@@ -86,7 +87,7 @@ impl Graph {
             let holds_any = self.nodes.iter().any(|n| n.home.is_some_and(|h| self.holds(c, h)));
             let held_by_child = self.clusters.iter().any(|d| d.parent == Some(c));
             if !holds_any && !held_by_child {
-                self.nodes.push(Node { id: String::new(), text: String::new(), shape: Shape::Space, home: Some(c), named: true });
+                self.nodes.push(Node { id: String::new(), text: String::new(), shape: Shape::Space, home: Some(c), named: true, sections: Vec::new() });
             }
         }
         // A subgraph holding only empty subgraphs holds their spaces, so it is never without a node either.
@@ -97,7 +98,7 @@ impl Graph {
     }
 }
 
-fn direction(word: &str) -> Option<Dir> {
+pub(crate) fn direction(word: &str) -> Option<Dir> {
     match word.trim().to_ascii_uppercase().as_str() { "TD" | "TB" => Some(Dir::Down), "BT" => Some(Dir::Up), "LR" => Some(Dir::Right), "RL" => Some(Dir::Left), _ => None }
 }
 
@@ -308,9 +309,22 @@ fn edge(c: &mut Cursor) -> Option<(Line, Head, Head, String)> {
     Some((style(&format!("{first}{second}")), h, tail, text))
 }
 
-struct Placed { lines: Vec<String>, w: f32, h: f32 }
+struct Placed { lines: Vec<String>, sections: Vec<Vec<String>>, w: f32, h: f32 }
 
 fn measure(n: &Node) -> Placed {
+    if !n.sections.is_empty() {
+        let mut sections = Vec::with_capacity(n.sections.len());
+        let mut max_w = 0.0_f32;
+        let mut total_h = 0.0_f32;
+        for sec in &n.sections {
+            let lines: Vec<String> = sec.iter().flat_map(|s| wrap(s, 240.0)).collect();
+            let (tw, th) = lines_size(&lines);
+            max_w = max_w.max(tw);
+            total_h += th + 12.0;
+            sections.push(lines);
+        }
+        return Placed { lines: Vec::new(), sections, w: (max_w + 28.0).max(80.0), h: total_h.max(32.0) };
+    }
     let lines = if matches!(n.shape, Shape::Start | Shape::End | Shape::Space) { Vec::new() } else { wrap(&n.text, 200.0) };
     let (tw, th) = lines_size(&lines);
     let (w, h) = match n.shape {
@@ -324,7 +338,7 @@ fn measure(n: &Node) -> Placed {
         Shape::Stadium => (tw + th + 24.0, th + 18.0),
         _ => (tw + 28.0, th + 18.0),
     };
-    Placed { lines, w: w.max(if matches!(n.shape, Shape::Start | Shape::End) { 0.0 } else { 48.0 }), h }
+    Placed { lines, sections: Vec::new(), w: w.max(if matches!(n.shape, Shape::Start | Shape::End) { 0.0 } else { 48.0 }), h }
 }
 
 /// A slot in a layer: a node, a point an edge passes through, the label an edge carries, or one side of a
@@ -335,7 +349,7 @@ struct Slot { node: Option<usize>, along: f32, across: f32, home: Option<usize>,
 /// Room between a box and what it holds.
 const PAD: f32 = 14.0;
 
-fn layout(g: &Graph) -> Diagram { laid(g).diagram }
+pub(crate) fn layout(g: &Graph) -> Diagram { laid(g).diagram }
 
 /// A diagram laid out, with where each node and each subgraph's box landed, for the tests that hold its shape.
 struct Laid { diagram: Diagram, #[cfg_attr(not(test), allow(dead_code))] nodes: Vec<[f32; 4]>, #[cfg_attr(not(test), allow(dead_code))] boxes: Vec<[f32; 4]> }
@@ -743,29 +757,48 @@ fn laid(g: &Graph) -> Laid {
         if let Some(c) = boxed[e].0 { let b1 = span_of(c).3; st.push((at_box(c, chain[0]), b1, b1, false)); }
         for &s in chain { st.push((x[s], y[s] - slots[s].along / 2.0, y[s] + slots[s].along / 2.0, slots[s].node.is_none() && slots[s].along == 0.0)); }
         if let Some(c) = boxed[e].1 { let b0 = span_of(c).2; st.push((at_box(c, chain[chain.len() - 1]), b0, b0, false)); }
+        let (head_end, tail_end) = if reversed[e] { (edge.tail, edge.head) } else { (edge.head, edge.tail) };
+        let (head_text, tail_text) = if reversed[e] { (&edge.from_label, &edge.to_label) } else { (&edge.to_label, &edge.from_label) };
+        let pullback = |h: Head| match h { Head::Triangle => 10.0, Head::Diamond | Head::FilledDiamond => 13.0, _ => 0.0 };
+        let (pb_tail, pb_head) = (pullback(tail_end), pullback(head_end));
         // Through a point an edge merely passes, it runs along the line from the station before to the one after.
         let slope = |i: usize| -> f32 {
             if i == 0 || i + 1 == st.len() || !st[i].3 { return 0.0; }
             (st[i + 1].0 - st[i - 1].0) / ((st[i + 1].1 + st[i + 1].2) / 2.0 - (st[i - 1].1 + st[i - 1].2) / 2.0).max(1.0)
         };
         let mut d = Pen::new();
+        let mut first_seg = (0.0, 0.0, 0.0, 0.0);
         let mut last_seg = (0.0, 0.0, 0.0, 0.0);
         for i in 0..st.len() - 1 {
             let (ax, ay) = (st[i].0, st[i].2);
             let (bx, by) = (st[i + 1].0, st[i + 1].1);
             let half = (by - ay) / 2.0;
-            let (p0, p1, p2, p3) = (point(ax, ay), point(ax + slope(i) * half, ay + half), point(bx - slope(i + 1) * half, by - half), point(bx, by));
+            let (mut p0, p1, p2, mut p3) = (point(ax, ay), point(ax + slope(i) * half, ay + half), point(bx - slope(i + 1) * half, by - half), point(bx, by));
+            let orig_p0 = p0;
+            let orig_p3 = p3;
+            if i == 0 && pb_tail > 0.0 {
+                let (dx, dy) = (p1.0 - p0.0, p1.1 - p0.1);
+                let l = (dx * dx + dy * dy).sqrt().max(1e-6);
+                p0 = (p0.0 + dx / l * pb_tail, p0.1 + dy / l * pb_tail);
+            }
+            if i + 2 == st.len() && pb_head > 0.0 {
+                let (dx, dy) = (p3.0 - p2.0, p3.1 - p2.1);
+                let l = (dx * dx + dy * dy).sqrt().max(1e-6);
+                p3 = (p3.0 - dx / l * pb_head, p3.1 - dy / l * pb_head);
+            }
+            if i == 0 { first_seg = (orig_p0.0, orig_p0.1, p1.0, p1.1); }
             if i == 0 || st[i].2 > st[i].1 { d = d.m(p0.0, p0.1); }
             d = d.c(p1.0, p1.1, p2.0, p2.1, p3.0, p3.1);
-            last_seg = (p2.0, p2.1, p3.0, p3.1);
+            last_seg = (p2.0, p2.1, orig_p3.0, orig_p3.1);
         }
         let width = match edge.line { Line::Thick => 2.6, _ => 1.4 };
         items.push(Item::Path { d: d.done(), fill: Fill::None, stroke: width, dash: edge.line == Line::Dotted });
         // Heads at either end, as written: an edge turned back for layout still points where it was written to.
-        let (head_end, tail_end) = if reversed[e] { (edge.tail, edge.head) } else { (edge.head, edge.tail) };
         let start = (point(st[0].0, st[0].2), point(st[0].0, (st[0].2 + st[1].1) / 2.0));
         ends_mark(&mut items, head_end, last_seg.2, last_seg.3, last_seg.2 - last_seg.0, last_seg.3 - last_seg.1);
         ends_mark(&mut items, tail_end, start.0 .0, start.0 .1, start.0 .0 - start.1 .0, start.0 .1 - start.1 .1);
+        if !tail_text.is_empty() { end_label(&mut items, &mut bounds, tail_text, first_seg.0, first_seg.1, first_seg.2 - first_seg.0, first_seg.3 - first_seg.1); }
+        if !head_text.is_empty() { end_label(&mut items, &mut bounds, head_text, last_seg.2, last_seg.3, last_seg.0 - last_seg.2, last_seg.1 - last_seg.3); }
         if let Some(s) = label_slot[e] { let (lx, ly) = point(x[s], y[s]); label(&mut items, &label_lines[e], lx, ly, false); }
     }
     // Loops back into the node they leave.
@@ -794,21 +827,83 @@ fn laid(g: &Graph) -> Laid {
         let p = &placed[v];
         nodes.push([cx - p.w / 2.0, cy - p.h / 2.0, cx + p.w / 2.0, cy + p.h / 2.0]);
         if g.nodes[v].shape == Shape::Space { continue; }
-        shape(&mut items, g.nodes[v].shape, cx, cy, p.w, p.h);
-        label(&mut items, &p.lines, cx, cy + if g.nodes[v].shape == Shape::Cylinder { 5.0 } else { 0.0 }, false);
+        if !p.sections.is_empty() {
+            draw_sections(&mut items, cx, cy, p.w, p.h, &p.sections);
+        } else {
+            shape(&mut items, g.nodes[v].shape, cx, cy, p.w, p.h);
+            label(&mut items, &p.lines, cx, cy + if g.nodes[v].shape == Shape::Cylinder { 5.0 } else { 0.0 }, false);
+        }
         bounds.add(cx - p.w / 2.0, cy - p.h / 2.0); bounds.add(cx + p.w / 2.0, cy + p.h / 2.0);
     }
     for s in label_slot.iter().flatten() { let (lx, ly) = point(x[*s], y[*s]); let (w, h) = if vertical { (slots[*s].across, slots[*s].along) } else { (slots[*s].along, slots[*s].across) }; bounds.add(lx - w / 2.0, ly - h / 2.0); bounds.add(lx + w / 2.0, ly + h / 2.0); }
     Laid { diagram: finish(items, bounds), nodes, boxes }
 }
 
+fn draw_sections(items: &mut Vec<Item>, cx: f32, cy: f32, w: f32, h: f32, sections: &[Vec<String>]) {
+    let (x0, mut y) = (cx - w / 2.0, cy - h / 2.0);
+    items.push(Item::Path { d: rect(x0, y, w, h, 3.0), fill: Fill::Soft, stroke: 1.4, dash: false });
+    for (si, sec) in sections.iter().enumerate() {
+        let (_, th) = lines_size(sec);
+        let sh = th + 12.0;
+        if si > 0 {
+            items.push(Item::Path { d: Pen::new().m(x0, y).l(x0 + w, y).done(), fill: Fill::None, stroke: 1.0, dash: false });
+        }
+        let top = y + 6.0 + draw::LINE / 2.0;
+        for (li, line) in sec.iter().enumerate() {
+            let bold = si == 0 && !line.starts_with("<<");
+            let tw = draw::width(line, draw::SIZE);
+            let tx = if si == 0 { cx } else { x0 + 12.0 + tw / 2.0 };
+            items.push(Item::Text { x: draw::r(tx), y: draw::r(top + draw::LINE * li as f32), text: line.clone(), size: draw::SIZE, bold });
+        }
+        y += sh;
+    }
+}
+
+fn end_label(items: &mut Vec<Item>, bounds: &mut Bounds, text: &str, x: f32, y: f32, dx: f32, dy: f32) {
+    let len = (dx * dx + dy * dy).sqrt().max(1e-6);
+    let (ux, uy) = (dx / len, dy / len);
+    let (px, py) = (-uy, ux);
+    let tw = draw::width(text, 12.0);
+    let lx = x + ux * 16.0 + px * (tw / 2.0 + 7.0);
+    let ly = y + uy * 16.0 + py * 10.0;
+    items.push(Item::Text { x: draw::r(lx), y: draw::r(ly), text: text.to_string(), size: 12.0, bold: false });
+    bounds.add(lx - tw / 2.0, ly - 8.0); bounds.add(lx + tw / 2.0, ly + 8.0);
+}
+
 fn ends_mark(items: &mut Vec<Item>, head: Head, x: f32, y: f32, dx: f32, dy: f32) {
     let len = (dx * dx + dy * dy).sqrt().max(1e-6);
+    let (ux, uy) = (dx / len, dy / len);
+    let (px, py) = (-uy, ux);
     match head {
         Head::None => {}
         Head::Arrow => items.push(arrowhead(x, y, dx, dy)),
-        Head::Circle => items.push(dot(x - dx / len * 4.0, y - dy / len * 4.0, 4.0, Fill::Solid)),
-        Head::Cross => items.push(cross(x - dx / len * 6.0, y - dy / len * 6.0)),
+        Head::Open => items.push(draw::open_head(x, y, dx, dy)),
+        Head::Triangle => {
+            let (bx, by) = (x - ux * 10.0, y - uy * 10.0);
+            items.push(Item::Path { d: Pen::new().m(x, y).l(bx + px * 5.5, by + py * 5.5).l(bx - px * 5.5, by - py * 5.5).z(), fill: Fill::None, stroke: 1.4, dash: false });
+        }
+        Head::Diamond | Head::FilledDiamond => {
+            let (mx, my) = (x - ux * 6.5, y - uy * 6.5);
+            let (tx, ty) = (x - ux * 13.0, y - uy * 13.0);
+            let fill = if head == Head::FilledDiamond { Fill::Solid } else { Fill::None };
+            items.push(Item::Path { d: Pen::new().m(x, y).l(mx + px * 4.5, my + py * 4.5).l(tx, ty).l(mx - px * 4.5, my - py * 4.5).z(), fill, stroke: 1.4, dash: false });
+        }
+        Head::Circle => items.push(dot(x - ux * 4.0, y - uy * 4.0, 4.0, Fill::Solid)),
+        Head::Cross => items.push(cross(x - ux * 6.0, y - uy * 6.0)),
+        Head::ErOne | Head::ErZeroOne => {
+            let bar = |d: f32, pen: Pen| -> Pen { let (cx, cy) = (x - ux * d, y - uy * d); pen.m(cx + px * 5.5, cy + py * 5.5).l(cx - px * 5.5, cy - py * 5.5) };
+            let pen = bar(6.0, Pen::new());
+            let pen = if head == Head::ErOne { bar(10.0, pen) } else { pen };
+            items.push(Item::Path { d: pen.done(), fill: Fill::None, stroke: 1.4, dash: false });
+            if head == Head::ErZeroOne { items.push(dot(x - ux * 12.0, y - uy * 12.0, 3.2, Fill::None)); }
+        }
+        Head::ErMany | Head::ErZeroMany => {
+            let (cx, cy) = (x - ux * 9.0, y - uy * 9.0);
+            let mut pen = Pen::new().m(cx, cy).l(x + px * 5.5, y + py * 5.5).m(cx, cy).l(x - px * 5.5, y - py * 5.5);
+            if head == Head::ErMany { pen = pen.m(cx + px * 5.5, cy + py * 5.5).l(cx - px * 5.5, cy - py * 5.5); }
+            items.push(Item::Path { d: pen.done(), fill: Fill::None, stroke: 1.4, dash: false });
+            if head == Head::ErZeroMany { items.push(dot(x - ux * 13.0, y - uy * 13.0, 3.2, Fill::None)); }
+        }
     }
 }
 

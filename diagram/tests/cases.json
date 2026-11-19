@@ -4246,5 +4246,220 @@
         "bold": false
       }
     ]
+  },
+  {
+    "x": -100.0,
+    "y": -35.6,
+    "width": 544.0,
+    "height": 509.2,
+    "items": [
+      {
+        "type": "path",
+        "d": "M220 0L440 0L440 220L220 220Z",
+        "fill": "soft",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M0 0L220 0L220 220L0 220Z",
+        "fill": "soft",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M0 220L220 220L220 440L0 440Z",
+        "fill": "soft",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M220 220L440 220L440 440L220 440Z",
+        "fill": "soft",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M4 0L436 0A4 4 0 0 1 440 4L440 436A4 4 0 0 1 436 440L4 440A4 4 0 0 1 0 436L0 4A4 4 0 0 1 4 0Z",
+        "fill": "none",
+        "stroke": 1.4,
+        "dash": false
+      },
+      {
+        "type": "path",
+        "d": "M220 0L220 440M0 220L440 220",
+        "fill": "none",
+        "stroke": 1.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 330.0,
+        "y": 100.2,
+        "text": "成熟领航：学术科研与组织反",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 330.0,
+        "y": 119.8,
+        "text": "哺",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 110.0,
+        "y": 100.2,
+        "text": "公益筑桥：扎根基层与精神文",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 110.0,
+        "y": 119.8,
+        "text": "明",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 110.0,
+        "y": 320.2,
+        "text": "探索初期：找寻定位与节奏平",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 110.0,
+        "y": 339.8,
+        "text": "衡",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 330.0,
+        "y": 320.2,
+        "text": "专注深潜：单点突破与学术自",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "text",
+        "x": 330.0,
+        "y": 339.8,
+        "text": "律",
+        "size": 14.0,
+        "bold": true
+      },
+      {
+        "type": "path",
+        "d": "M382.2 35.2A5 5 0 0 1 392.2 35.2A5 5 0 0 1 382.2 35.2Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 306.0,
+        "y": 55.0,
+        "text": "周帅 (挑战杯国奖 / 兼职辅导",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": 306.0,
+        "y": 74.6,
+        "text": "员 / 专利发明)",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M338.2 26.4A5 5 0 0 1 348.2 26.4A5 5 0 0 1 338.2 26.4Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 247.9,
+        "y": 16.6,
+        "text": "倪心舟 (340h志愿 / 云支教",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": 247.9,
+        "y": 36.2,
+        "text": "/ 主席团担当)",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "path",
+        "d": "M127 176A5 5 0 0 1 137 176A5 5 0 0 1 127 176Z",
+        "fill": "solid",
+        "stroke": 0.0,
+        "dash": false
+      },
+      {
+        "type": "text",
+        "x": 132.0,
+        "y": 195.8,
+        "text": "Campaign A",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": 110.0,
+        "y": 459.8,
+        "text": "个人能力突破",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": 330.0,
+        "y": 459.8,
+        "text": "公共价值创造",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": -54.0,
+        "y": 330.0,
+        "text": "被动应付任务",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": -54.0,
+        "y": 110.0,
+        "text": "主动自觉担当",
+        "size": 14.0,
+        "bold": false
+      },
+      {
+        "type": "text",
+        "x": 220.0,
+        "y": -21.8,
+        "text": "青年榜样的多维品格坐标",
+        "size": 14.0,
+        "bold": true
+      }
+    ]
   }
 ]

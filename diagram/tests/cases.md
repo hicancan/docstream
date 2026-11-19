@@ -39,6 +39,69 @@ flowchart TB
 ```
 
 ```mermaid
+flowchart TB
+  subgraph tools[四个通用工具]
+    SDP[sdp-tunnel 隧道]
+    CAS[cas-sso 认证]
+    ZF[zf-jwxt 教务]
+    SG[sitegraph 网站图]
+  end
+  subgraph truth[三个真源]
+    MAP[njupt-map 空间]
+    DATA[njupt-data 事实]
+    KNOW[njupt-knowledge 知识]
+  end
+  KSRC[njupt-knowledge-sources 历史导入] -.-> KNOW
+  SDP --> DATA
+  CAS --> DATA
+  ZF --> DATA
+  SG --> DATA
+  MAP --> DATA
+  subgraph kernels[三个通用内核]
+    SEARCH[wasm-search 搜索]
+    WAY[wayfind 寻路]
+    DOC[docstream 文档]
+  end
+  MAP --> PUB[data 发布快照]
+  DATA --> PUB
+  KNOW --> PUB
+  PUB --> STUDEV[studev 网页 安卓 Windows]
+  SEARCH --> STUDEV
+  WAY --> STUDEV
+  DOC --> STUDEV
+  LR[Local Runtime 第四端] --> STUDEV
+```
+
+```mermaid
+flowchart LR
+    subgraph 端
+        subgraph 安卓
+            a1[课表] --> a2[小组件]
+        end
+        subgraph 网页
+            w1[课表] --> w2[地图]
+        end
+    end
+    数据[(发布快照)] --> 端
+    subgraph 空的
+    end
+    w2 --> 空的
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> 待办
+    待办 --> 进行中
+    state 进行中 {
+        [*] --> 写
+        写 --> 改 : 发现问题
+        改 --> 写
+    }
+    进行中 --> 已完成
+    已完成 --> [*]
+```
+
+```mermaid
 stateDiagram-v2
     [*] --> 待办
     待办 --> 进行中 : 开始

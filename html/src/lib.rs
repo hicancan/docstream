@@ -1,7 +1,7 @@
 //! A document drawn as HTML, for pages built ahead of time (a blog): the same tree every client draws, its formulas
 //! typeset and its Mermaid diagrams laid out as SVG in the colour of the text, nothing left for a script to do.
 //! Code is given as `<pre data-language>` for the page's own highlighter; images keep the source the text gave them.
-use docstream_core::{read, Alert, Align, Block, Inline};
+use docstream_core::{read, Alert, Align, Block, Cell, Inline};
 use std::fmt::Write;
 
 /// Markdown drawn as HTML.
@@ -52,17 +52,24 @@ fn block_html(out: &mut String, block: &Block) {
             let _ = write!(out, "<pre data-language=\"{}\"><code>{}</code></pre>", attr(language), text_escape(text));
         }
         Block::Math { tex } => { let _ = write!(out, "<div class=\"math math-display\">{}</div>", docstream_math::svg(tex, true)); }
-        Block::Table { align, head, rows } => {
-            let style = |i: usize| match align.get(i) { Some(Align::Left) => " style=\"text-align:left\"", Some(Align::Center) => " style=\"text-align:center\"", Some(Align::Right) => " style=\"text-align:right\"", _ => "" };
-            out.push_str("<div class=\"table\"><table><thead><tr>");
-            for (i, cell) in head.iter().enumerate() { let _ = write!(out, "<th{}>", style(i)); inlines_html(out, cell); out.push_str("</th>"); }
-            out.push_str("</tr></thead><tbody>");
-            for row in rows {
+        Block::Table { head, body, .. } => {
+            let rows = |out: &mut String, rows: &[Vec<Cell>]| for row in rows {
                 out.push_str("<tr>");
-                for (i, cell) in row.iter().enumerate() { let _ = write!(out, "<td{}>", style(i)); inlines_html(out, cell); out.push_str("</td>"); }
+                for cell in row {
+                    let tag = if cell.header { "th" } else { "td" };
+                    let _ = write!(out, "<{tag}");
+                    if cell.row_span > 1 { let _ = write!(out, " rowspan=\"{}\"", cell.row_span); }
+                    if cell.col_span > 1 { let _ = write!(out, " colspan=\"{}\"", cell.col_span); }
+                    match cell.align { Align::Left => out.push_str(" style=\"text-align:left\""), Align::Center => out.push_str(" style=\"text-align:center\""), Align::Right => out.push_str(" style=\"text-align:right\""), Align::None => {} }
+                    out.push('>');
+                    inlines_html(out, &cell.inlines);
+                    let _ = write!(out, "</{tag}>");
+                }
                 out.push_str("</tr>");
-            }
-            out.push_str("</tbody></table></div>");
+            };
+            out.push_str("<div class=\"table\"><table>");
+            if !head.is_empty() { out.push_str("<thead>"); rows(out, head); out.push_str("</thead>"); }
+            out.push_str("<tbody>"); rows(out, body); out.push_str("</tbody></table></div>");
         }
         Block::Rule => out.push_str("<hr>"),
         Block::Html { text } => { let _ = write!(out, "<pre class=\"raw-html\">{}</pre>", text_escape(text)); }

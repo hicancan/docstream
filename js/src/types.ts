@@ -10,6 +10,8 @@ export type Inline =
     | { type: 'image'; src: string; alt: string }
     | { type: 'break' };
 export interface Item { checked?: boolean; blocks: Block[] }
+/** A table cell: the column it starts in; spans of one, `header: false` and `align: 'none'` are left out. */
+export interface Cell { inlines: Inline[]; column: number; rowSpan?: number; colSpan?: number; header?: boolean; align?: Align }
 export type Block =
     | { type: 'paragraph'; inlines: Inline[] }
     | { type: 'heading'; level: number; anchor: string; inlines: Inline[] }
@@ -18,7 +20,7 @@ export type Block =
     | { type: 'list'; ordered: boolean; start: number; items: Item[] }
     | { type: 'code'; language: string; text: string }
     | { type: 'math'; tex: string }
-    | { type: 'table'; align: Align[]; head: Inline[][]; rows: Inline[][][] }
+    | { type: 'table'; columns: number; head: Cell[][]; body: Cell[][] }
     | { type: 'rule' }
     | { type: 'html'; text: string };
 /** A top-level block: `key` changes only when the block does; `settled` once nothing more can join it. */

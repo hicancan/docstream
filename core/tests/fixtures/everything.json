@@ -269,76 +269,113 @@
   },
   {
     "type": "table",
-    "align": [
-      "left",
-      "center",
-      "right"
-    ],
+    "columns": 3,
     "head": [
       [
         {
-          "type": "text",
-          "text": "时间"
-        }
-      ],
-      [
+          "inlines": [
+            {
+              "type": "text",
+              "text": "时间"
+            }
+          ],
+          "column": 0,
+          "header": true,
+          "align": "left"
+        },
         {
-          "type": "text",
-          "text": "地点"
-        }
-      ],
-      [
+          "inlines": [
+            {
+              "type": "text",
+              "text": "地点"
+            }
+          ],
+          "column": 1,
+          "header": true,
+          "align": "center"
+        },
         {
-          "type": "text",
-          "text": "说明"
+          "inlines": [
+            {
+              "type": "text",
+              "text": "说明"
+            }
+          ],
+          "column": 2,
+          "header": true,
+          "align": "right"
         }
       ]
     ],
-    "rows": [
+    "body": [
       [
-        [
-          {
-            "type": "text",
-            "text": "周一 11:25"
-          }
-        ],
-        [
-          {
-            "type": "text",
-            "text": "教3-302"
-          }
-        ],
-        [
-          {
-            "type": "strong",
-            "children": [
-              {
-                "type": "text",
-                "text": "空"
-              }
-            ]
-          }
-        ]
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "周一 11:25"
+            }
+          ],
+          "column": 0,
+          "align": "left"
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "教3-302"
+            }
+          ],
+          "column": 1,
+          "align": "center"
+        },
+        {
+          "inlines": [
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "空"
+                }
+              ]
+            }
+          ],
+          "column": 2,
+          "align": "right"
+        }
       ],
       [
-        [
-          {
-            "type": "text",
-            "text": "周三 12:00"
-          }
-        ],
-        [
-          {
-            "type": "text",
-            "text": "图书馆"
-          }
-        ],
-        [
-          {
-            "type": "text",
-            "text": "午饭后"
-          }
-        ]
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "周三 12:00"
+            }
+          ],
+          "column": 0,
+          "align": "left"
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "图书馆"
+            }
+          ],
+          "column": 1,
+          "align": "center"
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "午饭后"
+            }
+          ],
+          "column": 2,
+          "align": "right"
+        }
       ]
     ]
   },

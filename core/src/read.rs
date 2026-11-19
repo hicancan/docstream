@@ -1,5 +1,6 @@
 //! Reading Markdown into the tree, one pass over pulldown-cmark's events.
-use crate::tree::{Align, Alert, Block, Inline, Item};
+use crate::html;
+use crate::tree::{Align, Alert, Block, Cell, Inline, Item};
 use pulldown_cmark::{Alignment, BlockQuoteKind, CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use std::ops::Range;
 use std::collections::HashMap;
@@ -17,11 +18,11 @@ pub(crate) fn read_ranged(text: &str) -> Vec<(Block, Range<usize>)> {
     let (text, marks) = normalize(text);
     // A place in the read text, found again in the text as written.
     let original = |at: usize| marks.iter().take_while(|&&(new, _)| new <= at).last().map_or(at, |&(new, old)| old + (at - new));
-    let mut reader = Reader { events: Parser::new_ext(&text, options()).into_offset_iter().collect(), at: 0 };
+    let mut reader = Reader { events: html::inline(Parser::new_ext(&text, options()).into_offset_iter().collect()), at: 0, after: Vec::new() };
     let mut blocks = Vec::new();
     while reader.at < reader.events.len() {
         let range = reader.events[reader.at].1.clone();
-        if let Some(block) = reader.block() { blocks.push((block, original(range.start)..original(range.end))); }
+        for block in reader.blocks() { blocks.push((block, original(range.start)..original(range.end))); }
     }
     anchor_blocks(blocks.iter_mut().map(|(block, _)| block));
     blocks
@@ -149,7 +150,12 @@ fn normalize(text: &str) -> (String, Vec<(usize, usize)>) {
     (out, marks)
 }
 
-struct Reader<'a> { events: Vec<(Event<'a>, Range<usize>)>, at: usize }
+struct Reader<'a> {
+    events: Vec<(Event<'a>, Range<usize>)>,
+    at: usize,
+    /// Blocks one piece of source held besides the block read from it, given next.
+    after: Vec<Block>,
+}
 
 impl<'a> Reader<'a> {
     fn next(&mut self) -> Option<Event<'a>> { let event = self.events.get(self.at).map(|(event, _)| event.clone()); self.at += 1; event }
@@ -159,8 +165,23 @@ impl<'a> Reader<'a> {
         let mut blocks = Vec::new();
         while let Some((event, _)) = self.events.get(self.at) {
             if matches!(event, Event::End(_)) { self.at += 1; break; }
-            if let Some(block) = self.block() { blocks.push(block); }
+            blocks.extend(self.blocks());
         }
+        blocks
+    }
+
+    /// The first of the blocks a piece of source holds; the rest come after it.
+    fn held(&mut self, blocks: Vec<Block>) -> Option<Block> {
+        let mut blocks = blocks.into_iter();
+        let first = blocks.next();
+        self.after.extend(blocks);
+        first
+    }
+
+    /// The next block, and any that came from the same source.
+    fn blocks(&mut self) -> Vec<Block> {
+        let mut blocks: Vec<Block> = self.block().into_iter().collect();
+        blocks.append(&mut self.after);
         blocks
     }
 
@@ -202,26 +223,27 @@ impl<'a> Reader<'a> {
                 Some(Block::List { ordered: start.is_some(), start: start.unwrap_or(1), items })
             }
             Event::Start(Tag::Table(align)) => {
-                let align = align.iter().map(|a| match a { Alignment::None => Align::None, Alignment::Left => Align::Left, Alignment::Center => Align::Center, Alignment::Right => Align::Right }).collect();
-                let (mut head, mut rows) = (Vec::new(), Vec::new());
+                let align: Vec<Align> = align.iter().map(|a| match a { Alignment::None => Align::None, Alignment::Left => Align::Left, Alignment::Center => Align::Center, Alignment::Right => Align::Right }).collect();
+                let row = |cells: Vec<Vec<Inline>>, header: bool| cells.into_iter().enumerate().map(|(i, inlines)| Cell { inlines, column: i as u32, row_span: 1, col_span: 1, header, align: align.get(i).copied().unwrap_or(Align::None) }).collect::<Vec<_>>();
+                let (mut head, mut body) = (Vec::new(), Vec::new());
                 while let Some(event) = self.next() {
                     match event {
-                        Event::Start(Tag::TableHead) => head = self.cells(),
-                        Event::Start(Tag::TableRow) => rows.push(self.cells()),
+                        Event::Start(Tag::TableHead) => head.push(row(self.cells(), true)),
+                        Event::Start(Tag::TableRow) => body.push(row(self.cells(), false)),
                         Event::End(TagEnd::Table) => break,
                         _ => {}
                     }
                 }
-                Some(Block::Table { align, head, rows })
+                Some(Block::Table { columns: align.len() as u32, head, body })
             }
             Event::Rule => Some(Block::Rule),
             Event::DisplayMath(tex) => Some(Block::Math { tex: tex.trim().to_string() }),
             Event::Start(Tag::HtmlBlock) => {
                 let mut text = String::new();
                 while let Some(event) = self.next() { match event { Event::Html(part) | Event::Text(part) => text.push_str(&part), Event::End(_) => break, _ => {} } }
-                Some(Block::Html { text: text.trim_end().to_string() })
+                self.held(html_block(text.trim_end()))
             }
-            Event::Html(text) => Some(Block::Html { text: text.trim_end().to_string() }),
+            Event::Html(text) => self.held(html_block(text.trim_end())),
             // A loose inline at block level (math alone on a line in some inputs): kept in a paragraph.
             event @ (Event::Text(_) | Event::Code(_) | Event::InlineMath(_)) => { self.at -= 1; let _ = event; Some(Block::Paragraph { inlines: self.inlines_loose() }) }
             Event::Start(_) => { self.skip_container(); None }
@@ -243,7 +265,7 @@ impl<'a> Reader<'a> {
                 }
                 _ => {
                     if !loose.is_empty() { blocks.push(Block::Paragraph { inlines: std::mem::take(&mut loose) }); }
-                    if let Some(block) = self.block() { blocks.push(block); }
+                    blocks.extend(self.blocks());
                 }
             }
         }
@@ -317,6 +339,38 @@ impl<'a> Reader<'a> {
             }),
         }
     }
+}
+
+/// A block of raw HTML: a table read as one, and what is written straight after it read as Markdown; text using only
+/// the tags text may use read as a paragraph; anything else kept as written.
+fn html_block(text: &str) -> Vec<Block> {
+    let lead = text.trim_start();
+    if lead.get(..6).is_some_and(|t| t.eq_ignore_ascii_case("<table")) {
+        if let Some((table, rest)) = html::table(text, inline_source) { return std::iter::once(table).chain(read(&text[rest..])).collect(); }
+    } else if html::only_inline(text) {
+        return vec![Block::Paragraph { inlines: inline_source(text) }];
+    }
+    vec![Block::Html { text: text.to_string() }]
+}
+
+/// Markdown read as text alone, never as blocks: a table cell's content, a line of HTML. Its lines are one line, as
+/// HTML reads them; it is read after a no-break space, so that a `1.` or `#` starting it is no list or heading.
+fn inline_source(source: &str) -> Vec<Inline> {
+    let text = format!("\u{a0}{}", source.trim().replace(['\r', '\n'], " "));
+    let mut reader = Reader { events: html::inline(Parser::new_ext(&text, options()).into_offset_iter().collect()), at: 0, after: Vec::new() };
+    let mut inlines = Vec::new();
+    while reader.at < reader.events.len() {
+        match reader.block() {
+            Some(Block::Paragraph { inlines: more }) => inlines.extend(more),
+            Some(Block::Math { tex }) => inlines.push(Inline::Math { tex, display: true }),
+            _ => {}
+        }
+    }
+    if let Some(Inline::Text { text }) = inlines.first_mut() {
+        *text = text.trim_start_matches('\u{a0}').to_string();
+        if text.is_empty() { inlines.remove(0); }
+    }
+    inlines
 }
 
 /// Neighbouring text is one text.

@@ -1,0 +1,480 @@
+[
+  {
+    "type": "paragraph",
+    "inlines": [
+      {
+        "type": "text",
+        "text": "水的分子式是 H"
+      },
+      {
+        "type": "subscript",
+        "children": [
+          {
+            "type": "text",
+            "text": "2"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "O，面积单位 m"
+      },
+      {
+        "type": "superscript",
+        "children": [
+          {
+            "type": "text",
+            "text": "2"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "，"
+      },
+      {
+        "type": "strong",
+        "children": [
+          {
+            "type": "text",
+            "text": "加粗"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "与"
+      },
+      {
+        "type": "emphasis",
+        "children": [
+          {
+            "type": "text",
+            "text": "强调"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "，"
+      },
+      {
+        "type": "strike",
+        "children": [
+          {
+            "type": "text",
+            "text": "删去"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "，"
+      },
+      {
+        "type": "highlight",
+        "children": [
+          {
+            "type": "text",
+            "text": "标记"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "。"
+      },
+      {
+        "type": "break"
+      },
+      {
+        "type": "text",
+        "text": "换行之后是 "
+      },
+      {
+        "type": "code",
+        "text": "a<b"
+      },
+      {
+        "type": "text",
+        "text": " 与 "
+      },
+      {
+        "type": "code",
+        "text": "Ctrl"
+      },
+      {
+        "type": "text",
+        "text": "，"
+      },
+      {
+        "type": "link",
+        "href": "https://a.b",
+        "children": [
+          {
+            "type": "text",
+            "text": "链接"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": " 与 "
+      },
+      {
+        "type": "link",
+        "href": "https://example.com/?a=1&b=2",
+        "children": [
+          {
+            "type": "text",
+            "text": "HTML 链接"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "。"
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "inlines": [
+      {
+        "type": "text",
+        "text": "没有闭合的 <b>不是标签，<span>别的标签</span>保持原样，a<b 也不是标签。"
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "inlines": [
+      {
+        "type": "image",
+        "src": "images/fig.png",
+        "alt": "一张图"
+      }
+    ]
+  },
+  {
+    "type": "table",
+    "columns": 3,
+    "head": [],
+    "body": [
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "合并两行"
+            }
+          ],
+          "column": 0,
+          "rowSpan": 2
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "合并两列"
+            }
+          ],
+          "column": 1,
+          "colSpan": 2
+        }
+      ],
+      [
+        {
+          "inlines": [
+            {
+              "type": "math",
+              "tex": "x^2",
+              "display": false
+            }
+          ],
+          "column": 1
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "H"
+            },
+            {
+              "type": "subscript",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "2"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "O"
+            },
+            {
+              "type": "break"
+            },
+            {
+              "type": "text",
+              "text": "第二行"
+            }
+          ],
+          "column": 2
+        }
+      ],
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "1. 不是列表"
+            }
+          ],
+          "column": 0
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "# 不是标题"
+            }
+          ],
+          "column": 1
+        },
+        {
+          "inlines": [
+            {
+              "type": "image",
+              "src": "images/cell.png",
+              "alt": ""
+            }
+          ],
+          "column": 2
+        }
+      ]
+    ]
+  },
+  {
+    "type": "table",
+    "columns": 2,
+    "head": [
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "项目"
+            }
+          ],
+          "column": 0,
+          "header": true
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "数值"
+            }
+          ],
+          "column": 1,
+          "header": true,
+          "align": "right"
+        }
+      ]
+    ],
+    "body": [
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "行头"
+            }
+          ],
+          "column": 0,
+          "header": true
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "<3 & "
+            },
+            {
+              "type": "math",
+              "tex": "a|b",
+              "display": false
+            }
+          ],
+          "column": 1
+        }
+      ]
+    ]
+  },
+  {
+    "type": "table",
+    "columns": 2,
+    "head": [
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "只有表头单元格的首行"
+            }
+          ],
+          "column": 0,
+          "header": true
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "是表头"
+            }
+          ],
+          "column": 1,
+          "header": true
+        }
+      ]
+    ],
+    "body": [
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "a"
+            }
+          ],
+          "column": 0
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "b"
+            }
+          ],
+          "column": 1
+        }
+      ]
+    ]
+  },
+  {
+    "type": "table",
+    "columns": 1,
+    "head": [],
+    "body": [
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "<div>块级标签</div>"
+            }
+          ],
+          "column": 0
+        }
+      ]
+    ]
+  },
+  {
+    "type": "html",
+    "text": "<div>其他 HTML 照原文保留</div>"
+  },
+  {
+    "type": "table",
+    "columns": 1,
+    "head": [],
+    "body": [
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "表格"
+            }
+          ],
+          "column": 0
+        }
+      ]
+    ]
+  },
+  {
+    "type": "paragraph",
+    "inlines": [
+      {
+        "type": "text",
+        "text": "(a) 紧跟在表格后的图注是正文"
+      }
+    ]
+  },
+  {
+    "type": "list",
+    "ordered": false,
+    "start": 1,
+    "items": [
+      {
+        "blocks": [
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "列表里的表格"
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "columns": 1,
+            "head": [],
+            "body": [
+              [
+                {
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "格"
+                    }
+                  ],
+                  "column": 0
+                }
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "table",
+    "columns": 2,
+    "head": [],
+    "body": [
+      [
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "还没写完的表格"
+            }
+          ],
+          "column": 0
+        },
+        {
+          "inlines": [
+            {
+              "type": "text",
+              "text": "第二格"
+            }
+          ],
+          "column": 1
+        }
+      ]
+    ]
+  }
+]

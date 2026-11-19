@@ -14,9 +14,11 @@ pub enum Block {
     Code { language: String, text: String },
     /// Display math, as TeX.
     Math { tex: String },
-    Table { align: Vec<Align>, head: Vec<Vec<Inline>>, rows: Vec<Vec<Vec<Inline>>> },
+    /// A table, as Markdown writes it or as HTML does with cells spanning rows and columns: the rows of its head, then
+    /// of its body, each cell knowing the column it starts in, so that no client works the spans out again.
+    Table { columns: u32, head: Vec<Vec<Cell>>, body: Vec<Vec<Cell>> },
     Rule,
-    /// Raw HTML, kept as the text it is: never drawn as markup.
+    /// HTML beyond what docstream reads (see the `html` module), kept as the text it is: never drawn as markup.
     Html { text: String },
 }
 
@@ -28,6 +30,25 @@ pub struct Item {
     pub checked: Option<bool>,
     pub blocks: Vec<Block>,
 }
+
+/// A table cell. Spans of one, a cell that is no header and no alignment are left out of the JSON.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Cell {
+    pub inlines: Vec<Inline>,
+    /// The column it starts in, from 0, after the places cells spanning down from rows above hold.
+    pub column: u32,
+    #[serde(skip_serializing_if = "one")]
+    pub row_span: u32,
+    #[serde(skip_serializing_if = "one")]
+    pub col_span: u32,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub header: bool,
+    #[serde(skip_serializing_if = "Align::is_none")]
+    pub align: Align,
+}
+
+fn one(n: &u32) -> bool { *n == 1 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -54,3 +75,5 @@ pub enum Alert { Note, Tip, Important, Warning, Caution }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Align { None, Left, Center, Right }
+
+impl Align { pub fn is_none(&self) -> bool { *self == Align::None } }

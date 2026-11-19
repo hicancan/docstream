@@ -18,3 +18,11 @@ fn draws_every_kind_of_block_with_formulas_and_diagrams_as_svg() {
 fn raw_html_is_shown_as_text() {
     assert!(html("<script>alert(1)</script>").contains("&lt;script&gt;"));
 }
+
+#[test]
+fn the_html_a_document_may_write_is_drawn_as_what_it_means_and_nothing_else_runs() {
+    let page = html("H<sub>2</sub>O <a href=\"javascript:alert(1)\">x</a> <img src=\"a.png\" onerror=\"alert(1)\">\n\n<table><tr><th rowspan=\"2\">头</th><td colspan=\"2\">$x$</td></tr><tr><td>a</td><td>b</td></tr></table>");
+    assert!(page.contains("H<sub>2</sub>O") && page.contains("<a href=\"#\">x</a>") && page.contains("<img src=\"a.png\" alt=\"\" loading=\"lazy\">"));
+    assert!(!page.contains("onerror"));
+    assert!(!page.contains("<thead>") && page.contains("<tbody><tr><th rowspan=\"2\">头</th><td colspan=\"2\"><span class=\"math math-inline\"><svg"));
+}

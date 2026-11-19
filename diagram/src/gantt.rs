@@ -75,6 +75,9 @@ fn duration(text: &str) -> Option<Minute> {
 pub fn gantt(body: &[&str]) -> Option<Diagram> {
     let mut title = None;
     let mut axis = None;
+    let mut interval: Option<Interval> = None;
+    // Weeks begin on Sunday unless the chart says otherwise, as in Mermaid.
+    let mut week_start = 0i64;
     let mut sections = vec![Section { name: None, tasks: Vec::new() }];
     let mut last_end: Option<Minute> = None;
     let mut ends: Vec<(String, Minute)> = Vec::new();
@@ -83,8 +86,10 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
         match word {
             "title" => { title = Some(rest.to_string()); continue; }
             "axisFormat" => { axis = Some(rest.to_string()); continue; }
+            "tickInterval" => { interval = Interval::read(rest); continue; }
+            "weekday" => { if let Some(day) = WEEKDAYS.iter().position(|d| rest.eq_ignore_ascii_case(d)) { week_start = day as i64; } continue; }
             "section" => { sections.push(Section { name: Some(rest.to_string()), tasks: Vec::new() }); continue; }
-            "dateFormat" | "excludes" | "includes" | "todayMarker" | "tickInterval" | "weekday" | "displayMode" | "accTitle" | "accDescr" => continue,
+            "dateFormat" | "excludes" | "includes" | "todayMarker" | "displayMode" | "accTitle" | "accDescr" => continue,
             _ => {}
         }
         let Some((name, spec)) = line.split_once(':') else { continue };
@@ -119,12 +124,14 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
     let first = sections.iter().flat_map(|s| &s.tasks).map(|t| t.start).min()?;
     let last = sections.iter().flat_map(|s| &s.tasks).map(|t| t.end).max()?.max(first + 1);
 
-    // The time axis: a step that gives about six to ten ticks, starting on a whole step.
+    // The time axis: ticks on whole units of the calendar, as many as the chart asks for or six to ten of them,
+    // each with room for its time.
     let span = last - first;
-    const STEPS: [Minute; 14] = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080, 20160, 43200];
-    let step = *STEPS.iter().find(|&&s| span / s <= 10).unwrap_or(&129600);
-    let day_based = step >= 1440;
-    let plot = (span as f32 / step as f32 * 72.0).clamp(360.0, 900.0);
+    let interval = interval.unwrap_or_else(|| Interval::fitting(span));
+    let ticks = interval.ticks(first, last, week_start);
+    let format = axis.clone().unwrap_or_else(|| interval.format(first, last).to_string());
+    let tick_room = ticks.iter().map(|&t| width(&format_tick(t, &format), 12.0)).fold(0.0, f32::max) + 24.0;
+    let plot = (ticks.len().max(2) as f32 * tick_room.max(64.0)).clamp(360.0, 900.0);
     let scale = plot / span as f32;
 
     let names: Vec<Vec<String>> = sections.iter().flat_map(|s| &s.tasks).map(|t| wrap(&t.name, 200.0)).collect();
@@ -169,25 +176,21 @@ pub fn gantt(body: &[&str]) -> Option<Diagram> {
     }
     // Ticks and their times, under the bars, and a faint line down from each.
     let bottom = y + 4.0;
-    let mut tick = first - first.rem_euclid(step) + if first.rem_euclid(step) == 0 { 0 } else { step };
-    if day_based { tick = first - first.rem_euclid(1440) + if first.rem_euclid(1440) == 0 { 0 } else { 1440 }; }
     items.push(Item::Path { d: Pen::new().m(left, bottom).l(left + plot, bottom).done(), fill: Fill::None, stroke: 1.0, dash: false });
-    while tick <= last {
+    for &tick in &ticks {
         let x = x_of(tick);
         items.push(Item::Path { d: Pen::new().m(x, top).l(x, bottom + 4.0).done(), fill: Fill::None, stroke: 0.6, dash: true });
-        items.push(Item::Text { x: r(x), y: r(bottom + 4.0 + LINE / 2.0 + 2.0), text: format_tick(tick, axis.as_deref(), day_based), size: 12.0, bold: false });
-        tick += step;
+        items.push(Item::Text { x: r(x), y: r(bottom + 4.0 + LINE / 2.0 + 2.0), text: format_tick(tick, &format), size: 12.0, bold: false });
     }
     let end_y = bottom + 4.0 + LINE + 4.0;
     b.add(0.0, 0.0); b.add(left + plot + 24.0, end_y);
     Some(finish(items, b))
 }
 
-/// A tick's time as the axis format says (%Y %m %d %H %M %b %a are read), else as a day or a time of day.
-fn format_tick(at: Minute, format: Option<&str>, day_based: bool) -> String {
+/// A tick's time as the axis format says: %Y %y %m %d %e %H %M %b %a are read.
+fn format_tick(at: Minute, format: &str) -> String {
     let (y, m, d) = civil_from_days(at.div_euclid(1440));
     let (h, min) = (at.rem_euclid(1440) / 60, at.rem_euclid(60));
-    let format = format.unwrap_or(if day_based { "%m-%d" } else { "%H:%M" });
     let mut out = String::new();
     let mut chars = format.chars();
     while let Some(c) = chars.next() {
@@ -202,4 +205,106 @@ fn format_tick(at: Minute, format: Option<&str>, day_based: bool) -> String {
         }
     }
     out
+}
+
+const WEEKDAYS: [&str; 7] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+/// How far apart ticks are, in units of the calendar: minutes run on the clock, months and years on the calendar,
+/// so a tick lands on the first of a month however long the month is.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Interval { Minutes(i64), Days(i64), Weeks(i64), Months(i64), Years(i64) }
+
+impl Interval {
+    /// `tickInterval` as Mermaid writes it: a whole number and a unit, `1week`, `15minute`, `3month`.
+    fn read(text: &str) -> Option<Interval> {
+        let text = text.trim();
+        let digits = text.find(|c: char| !c.is_ascii_digit())?;
+        let n: i64 = text[..digits].parse().ok().filter(|&n| n > 0)?;
+        Some(match &text[digits..] {
+            "minute" => Interval::Minutes(n), "hour" => Interval::Minutes(n * 60), "day" => Interval::Days(n),
+            "week" => Interval::Weeks(n), "month" => Interval::Months(n), "year" => Interval::Years(n),
+            _ => return None,
+        })
+    }
+
+    /// About how many minutes one step covers, to count ticks before placing them.
+    fn length(self) -> i64 {
+        match self { Interval::Minutes(n) => n, Interval::Days(n) => n * 1440, Interval::Weeks(n) => n * 10080, Interval::Months(n) => n * 43830, Interval::Years(n) => n * 525960 }
+    }
+
+    /// The shortest step that leaves no more than ten ticks across the span.
+    fn fitting(span: Minute) -> Interval {
+        use Interval::*;
+        const STEPS: [Interval; 24] = [Minutes(5), Minutes(10), Minutes(15), Minutes(30), Minutes(60), Minutes(120), Minutes(180), Minutes(360), Minutes(720),
+            Days(1), Days(2), Weeks(1), Weeks(2), Months(1), Months(2), Months(3), Months(6), Years(1), Years(2), Years(5), Years(10), Years(20), Years(50), Years(100)];
+        STEPS.into_iter().find(|s| span / s.length() <= 10).unwrap_or(Years(1000))
+    }
+
+    /// Every tick from the first whole unit at or after `first` to `last`.
+    fn ticks(self, first: Minute, last: Minute, week_start: i64) -> Vec<Minute> {
+        let midnight = |m: Minute| m.div_euclid(1440);
+        let up = |m: Minute, unit: i64| m + (unit - m.rem_euclid(unit)) % unit;
+        let mut out = Vec::new();
+        match self {
+            Interval::Minutes(n) => { let mut t = up(first, n); while t <= last { out.push(t); t += n; } }
+            Interval::Days(n) => { let mut t = up(first, 1440); while t <= last { out.push(t); t += n * 1440; } }
+            Interval::Weeks(n) => {
+                // 1970-01-01 was a Thursday, day 4 counted from Sunday.
+                let mut day = midnight(up(first, 1440));
+                while (day + 4 - week_start).rem_euclid(7) != 0 { day += 1; }
+                while day * 1440 <= last { out.push(day * 1440); day += 7 * n; }
+            }
+            Interval::Months(n) | Interval::Years(n) => {
+                let per = if matches!(self, Interval::Months(_)) { n } else { 12 * n };
+                let (y, m, d) = civil_from_days(midnight(first));
+                let mut month = y * 12 + (m - 1) + i64::from(d > 1 || first.rem_euclid(1440) > 0);
+                if per % 12 == 0 { month = (month + 11).div_euclid(12) * 12; } else if 12 % per == 0 { month = (month + per - 1).div_euclid(per) * per; }
+                loop {
+                    let t = days_from_civil(month.div_euclid(12), month.rem_euclid(12) + 1, 1) * 1440;
+                    if t > last { break; }
+                    out.push(t);
+                    month += per;
+                }
+            }
+        }
+        out
+    }
+
+    /// How a tick is written when the chart does not say: as much of the date as tells the ticks apart, with the
+    /// year once the axis runs into another year.
+    fn format(self, first: Minute, last: Minute) -> &'static str {
+        let year = |m: Minute| civil_from_days(m.div_euclid(1440)).0;
+        let years = year(first) != year(last);
+        match self {
+            Interval::Minutes(_) if first.div_euclid(1440) != last.div_euclid(1440) => "%m-%d %H:%M",
+            Interval::Minutes(_) => "%H:%M",
+            Interval::Days(_) | Interval::Weeks(_) if years => "%Y-%m-%d",
+            Interval::Days(_) | Interval::Weeks(_) => "%m-%d",
+            Interval::Months(_) if years => "%Y-%m",
+            Interval::Months(_) => "%b",
+            Interval::Years(_) => "%Y",
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn at(text: &str) -> Minute { moment(text).unwrap() }
+
+    #[test]
+    fn ticks_fall_on_whole_units_of_the_calendar() {
+        let (first, last) = (at("2025-12-18"), at("2026-11-19"));
+        let step = Interval::fitting(last - first);
+        assert_eq!(step, Interval::Months(2));
+        let ticks: Vec<String> = step.ticks(first, last, 0).into_iter().map(|t| format_tick(t, step.format(first, last))).collect();
+        assert_eq!(ticks, ["2026-01", "2026-03", "2026-05", "2026-07", "2026-09", "2026-11"]);
+        let week = Interval::Weeks(1).ticks(at("2026-11-11"), at("2026-11-30"), 1);
+        assert_eq!(week.iter().map(|&t| format_tick(t, "%m-%d %a")).collect::<Vec<_>>(), ["11-16 周一", "11-23 周一", "11-30 周一"]);
+        assert_eq!(Interval::read("15minute"), Some(Interval::Minutes(15)));
+        assert_eq!(Interval::read("1week"), Some(Interval::Weeks(1)));
+        assert_eq!(Interval::read("0day"), None);
+        assert_eq!(Interval::Minutes(60).format(at("2026-11-14 22:00"), at("2026-11-15 02:00")), "%m-%d %H:%M");
+    }
 }

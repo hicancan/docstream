@@ -32,7 +32,8 @@ impl Stream {
         // A block is settled once a blank line has come after it: until then the next line may still join it
         // (a table's next row, a list's next item, a quote's lazy line).
         for (block, range) in settled {
-            let after = &self.text[range.end.saturating_sub(1)..];
+            // From the block's last character on, whatever its width.
+            let after = &self.text[self.text[..range.end].char_indices().next_back().map_or(0, |(at, _)| at)..];
             blocks.push((block.clone(), self.done || after.contains("\n\n")));
         }
         if self.done {

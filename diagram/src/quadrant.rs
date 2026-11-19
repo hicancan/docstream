@@ -48,8 +48,8 @@ pub fn quadrant(body: &[&str]) -> Option<Diagram> {
     items.push(Item::Path { d: Pen::new().m(half, 0.0).l(half, SIDE).m(0.0, half).l(SIDE, half).done(), fill: Fill::None, stroke: 1.0, dash: false });
     b.add(0.0, 0.0); b.add(SIDE, SIDE);
 
-    // What is already written, so a point's name finds room among it.
-    let mut taken: Vec<[f32; 4]> = Vec::new();
+    // What is already drawn, so a point's name finds room among it: the axes across the middle, then what is written.
+    let mut taken: Vec<[f32; 4]> = vec![[half - 2.0, 0.0, half + 2.0, SIDE], [0.0, half - 2.0, SIDE, half + 2.0]];
     for (i, quarter) in quarters.iter().enumerate() {
         let Some(text) = quarter else { continue };
         let lines = wrap(text, half - 28.0);
@@ -63,20 +63,24 @@ pub fn quadrant(body: &[&str]) -> Option<Diagram> {
     for (name, x, y) in &points {
         let (px, py) = (x * SIDE, (1.0 - y) * SIDE);
         items.push(dot(px, py, 5.0, Fill::Solid));
-        let lines = wrap(name, 180.0);
-        let (w, h) = lines_size(&lines);
-        // Around the point in eight places, below first: the first that covers nothing and stays in the square, else
-        // the one that covers least.
-        let (dx, dy) = (12.0 + w / 2.0, 10.0 + h / 2.0);
-        let places = [(px, py + dy), (px, py - dy), (px + dx, py), (px - dx, py),
-            (px - 8.0 + w / 2.0, py + dy), (px + 8.0 - w / 2.0, py + dy), (px - 8.0 + w / 2.0, py - dy), (px + 8.0 - w / 2.0, py - dy)];
-        let covered = |cx: f32, cy: f32| -> f32 {
-            let r = [cx - w / 2.0, cy - h / 2.0, cx + w / 2.0, cy + h / 2.0];
-            let over: f32 = taken.iter().map(|t| (r[2].min(t[2]) - r[0].max(t[0])).max(0.0) * (r[3].min(t[3]) - r[1].max(t[1])).max(0.0)).sum();
-            let outside = ((0.0 - r[0]).max(0.0) + (r[2] - SIDE).max(0.0)) * h + ((0.0 - r[1]).max(0.0) + (r[3] - SIDE).max(0.0)) * w;
-            over + outside
-        };
-        let (cx, cy) = places.iter().copied().min_by(|a, b| covered(a.0, a.1).total_cmp(&covered(b.0, b.1))).unwrap_or(places[0]);
+        // In eight places around the point, below first, at three widths, widest first: the first that covers nothing
+        // and stays in the square, else the one that covers least.
+        let mut best: Option<(f32, Vec<String>, f32, f32, f32, f32)> = None;
+        for max in [180.0, 140.0, 110.0] {
+            let lines = wrap(name, max);
+            let (w, h) = lines_size(&lines);
+            let (dx, dy) = (12.0 + w / 2.0, 10.0 + h / 2.0);
+            let places = [(px, py + dy), (px, py - dy), (px + dx, py), (px - dx, py),
+                (px - 8.0 + w / 2.0, py + dy), (px + 8.0 - w / 2.0, py + dy), (px - 8.0 + w / 2.0, py - dy), (px + 8.0 - w / 2.0, py - dy)];
+            for (cx, cy) in places {
+                let r = [cx - w / 2.0, cy - h / 2.0, cx + w / 2.0, cy + h / 2.0];
+                let over: f32 = taken.iter().map(|t| (r[2].min(t[2]) - r[0].max(t[0])).max(0.0) * (r[3].min(t[3]) - r[1].max(t[1])).max(0.0)).sum();
+                let outside = ((0.0 - r[0]).max(0.0) + (r[2] - SIDE).max(0.0)) * h + ((0.0 - r[1]).max(0.0) + (r[3] - SIDE).max(0.0)) * w;
+                let cost = over + outside;
+                if best.as_ref().is_none_or(|b| cost < b.0 - 0.01) { best = Some((cost, lines.clone(), cx, cy, w, h)); }
+            }
+        }
+        let Some((_, lines, cx, cy, w, h)) = best else { continue };
         label(&mut items, &lines, cx, cy, false);
         taken.push([cx - w / 2.0, cy - h / 2.0, cx + w / 2.0, cy + h / 2.0]);
         b.add(cx - w / 2.0, cy - h / 2.0); b.add(cx + w / 2.0, cy + h / 2.0);

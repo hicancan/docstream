@@ -257,3 +257,9 @@ quadrantChart
     "倪心舟 (340h志愿 / 云支教 / 主席团担当)": [0.78, 0.94]
     Campaign A:::hot: [0.3, 0.6] radius: 12
 ```
+
+```mermaid
+flowchart LR
+    T2022["<b>2022 · 肇始与合流</b><br/>心理工作站 + 易班工作室 ➔ 学生发展中心"] --> T2023["<strong>2023—2024</strong><br/>大草坪音乐诊疗 · <i>第一次</i>全员集中学习"]
+    T2023 --> W["wasm-search 端侧检索<br/>(< 1 ms BM25 打分与高亮)"]
+```

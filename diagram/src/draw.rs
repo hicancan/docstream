@@ -26,6 +26,7 @@ pub const LINE: f32 = SIZE * 1.4;
 /// How wide words are drawn, as a typical sans-serif face draws them.
 pub fn width(text: &str, size: f32) -> f32 {
     text.chars().map(|c| match c {
+        BOLD => 0.0,
         ' ' => 0.28,
         'i' | 'j' | 'l' | '.' | ',' | ':' | ';' | '\'' | '|' | '!' => 0.26,
         'f' | 't' | 'r' | '(' | ')' | '[' | ']' | '-' => 0.36,
@@ -41,12 +42,39 @@ fn is_wide(c: char) -> bool {
     matches!(c as u32, 0x1100..=0x115F | 0x2E80..=0xA4CF | 0xAC00..=0xD7A3 | 0xF900..=0xFAFF | 0xFE30..=0xFE4F | 0xFF00..=0xFF60 | 0xFFE0..=0xFFE6 | 0x1F300..=0x1FAFF | 0x20000..=0x3FFFD)
 }
 
+/// Marks a line drawn bold, at its start; `label` takes it off.
+const BOLD: char = '\u{2}';
+
+/// Text without the simple tags Mermaid allows in its labels (`<b>`, `<i>`, `<strong>`…), and whether all of it was
+/// inside `<b>` or `<strong>`.
+fn untag(text: &str) -> (String, bool) {
+    let trimmed = text.trim();
+    let bold = ["b", "strong"].iter().any(|t| trimmed.starts_with(&format!("<{t}>")) && trimmed.ends_with(&format!("</{t}>")));
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '<' {
+            let mut j = i + 1;
+            if chars.get(j) == Some(&'/') { j += 1; }
+            let name = j;
+            while chars.get(j).is_some_and(|c| c.is_ascii_alphabetic()) { j += 1; }
+            if j > name && chars.get(j) == Some(&'>') { i = j + 1; continue; }
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    (out, bold)
+}
+
 /// Words broken into lines no wider than `max`: at `<br>` and newlines always, then at spaces, or between any two
-/// CJK characters.
+/// CJK characters. A line Mermaid wrote inside `<b>` is drawn bold.
 pub fn wrap(text: &str, max: f32) -> Vec<String> {
     let text = text.replace("<br/>", "\n").replace("<br />", "\n").replace("<br>", "\n").replace("\\n", "\n");
     let mut lines = Vec::new();
     for paragraph in text.split('\n') {
+        let (paragraph, bold) = untag(paragraph);
+        let first = lines.len();
         let mut line = String::new();
         let mut word = String::new();
         let flush_word = |line: &mut String, word: &mut String, lines: &mut Vec<String>| {
@@ -62,6 +90,7 @@ pub fn wrap(text: &str, max: f32) -> Vec<String> {
         }
         flush_word(&mut line, &mut word, &mut lines);
         lines.push(line.trim().to_string());
+        if bold { for l in &mut lines[first..] { l.insert(0, BOLD); } }
     }
     lines
 }
@@ -69,7 +98,10 @@ pub fn wrap(text: &str, max: f32) -> Vec<String> {
 /// Lines of words centred on (x, y).
 pub fn label(items: &mut Vec<Item>, lines: &[String], x: f32, y: f32, bold: bool) {
     let top = y - LINE * (lines.len() as f32 - 1.0) / 2.0;
-    for (i, line) in lines.iter().enumerate() { items.push(Item::Text { x: r(x), y: r(top + LINE * i as f32), text: line.clone(), size: SIZE, bold }); }
+    for (i, line) in lines.iter().enumerate() {
+        let (text, bold) = match line.strip_prefix(BOLD) { Some(text) => (text.to_string(), true), None => (line.clone(), bold) };
+        items.push(Item::Text { x: r(x), y: r(top + LINE * i as f32), text, size: SIZE, bold });
+    }
 }
 
 pub fn lines_size(lines: &[String]) -> (f32, f32) { (lines.iter().map(|l| width(l, SIZE)).fold(0.0, f32::max), LINE * lines.len() as f32) }

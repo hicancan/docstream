@@ -51,9 +51,11 @@ pub enum Node {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StyleChange { Display, Text, Script, ScriptScript }
 
-pub fn parse(tex: &str) -> Node { let mut p = Parser { chars: tex.chars().collect(), at: 0 }; Node::Group(p.list(None)) }
+pub fn parse(tex: &str) -> Node { let mut p = Parser { chars: tex.chars().collect(), at: 0, stop: None }; Node::Group(p.list(None)) }
 
-struct Parser { chars: Vec<char>, at: usize }
+/// `stop` is where the list being read ends besides its closing brace: a cell at `&`, `\\` or `\end`, a fenced body at
+/// `\right`. A switch such as `\displaystyle` or `\bf` reaches as far as the list it is in, and no farther.
+struct Parser { chars: Vec<char>, at: usize, stop: Option<&'static [&'static str]> }
 
 const GREEK: &[(&str, char)] = &[
     ("alpha", 'α'), ("beta", 'β'), ("gamma", 'γ'), ("delta", 'δ'), ("epsilon", 'ϵ'), ("varepsilon", 'ε'), ("zeta", 'ζ'), ("eta", 'η'),
@@ -110,6 +112,8 @@ const SYMBOLS: &[(&str, char, Class)] = &[
     ("blacktriangle", '▲', Class::Ord), ("blacktriangledown", '▼', Class::Ord), ("blacktriangleleft", '◀', Class::Ord), ("blacktriangleright", '▶', Class::Ord), ("blacklozenge", '♦', Class::Ord),
     ("boxtimes", '⊠', Class::Bin), ("boxplus", '⊞', Class::Bin), ("boxdot", '⊡', Class::Bin), ("diamondsuit", '♢', Class::Ord), ("heartsuit", '♡', Class::Ord), ("spadesuit", '♠', Class::Ord),
     ("varkappa", 'ϰ', Class::Ord), ("pounds", '£', Class::Ord), ("boxminus", '⊟', Class::Bin),
+    ("beth", 'ℶ', Class::Ord), ("box", '□', Class::Ord), ("astrosun", '☉', Class::Ord), ("vdot", '⋅', Class::Bin),
+    ("ulcorner", '⌜', Class::Open), ("urcorner", '⌝', Class::Close), ("llcorner", '⌞', Class::Open), ("lrcorner", '⌟', Class::Close),
     ("backslash", '\\', Class::Ord), ("%", '%', Class::Ord), ("$", '$', Class::Ord), ("#", '#', Class::Ord), ("&", '&', Class::Ord), ("_", '_', Class::Ord),
 ];
 const LARGE: &[(&str, char, bool)] = &[
@@ -146,7 +150,17 @@ impl Parser {
     fn skip_space(&mut self) { while self.peek().is_some_and(char::is_whitespace) { self.at += 1; } }
 
     /// Atoms up to the end, a closing brace, `\right`, `\end` or an array's `&` / `\\` (when `stop` asks for them).
-    fn list(&mut self, stop: Option<&[&str]>) -> Vec<Node> {
+    fn list(&mut self, stop: Option<&'static [&'static str]>) -> Vec<Node> {
+        let outer = std::mem::replace(&mut self.stop, stop);
+        let out = self.items(stop);
+        self.stop = outer;
+        out
+    }
+
+    /// What a switch reaches: the rest of the list it is in.
+    fn rest(&mut self) -> Node { group(self.list(self.stop)) }
+
+    fn items(&mut self, stop: Option<&'static [&'static str]>) -> Vec<Node> {
         let mut out = Vec::new();
         loop {
             self.skip_space();
@@ -269,7 +283,15 @@ impl Parser {
                 let class = if name.ends_with('l') { Class::Open } else if name.ends_with('r') { Class::Close } else { class_of(delimiter) };
                 Node::Sized { delimiter, class, size }
             }
-            "text" | "textrm" | "textnormal" | "mbox" | "textit" | "textbf" | "texttt" | "textsf" | "textup" | "textsl" | "emph" | "textmd" => Node::Text { text: self.braced_text(), class: Class::Ord },
+            "text" | "textrm" | "textnormal" | "mbox" | "textit" | "textbf" | "texttt" | "textsf" | "textup" | "textsl" | "emph" | "textmd" | "textsc" => Node::Text { text: self.braced_text(), class: Class::Ord },
+            // TeX's own numbering in lower-case Roman numerals: \romannumeral 4 is iv.
+            "romannumeral" => {
+                self.skip_space();
+                let start = self.at;
+                while self.peek().is_some_and(|c| c.is_ascii_digit()) { self.at += 1; }
+                let n: u32 = self.chars[start..self.at].iter().collect::<String>().parse().unwrap_or(0);
+                Node::Text { text: roman(n), class: Class::Ord }
+            }
             // A letter or number in a circle, as Unicode has them; anything longer in a frame.
             "textcircled" => {
                 let inside = self.braced_text();
@@ -302,7 +324,7 @@ impl Parser {
             // The font switches of plain TeX: what follows them in the group, in that face.
             "bf" | "rm" | "it" | "mit" | "sf" | "tt" | "cal" => {
                 let face = match name.as_str() { "bf" => Face::Bold, "rm" => Face::Upright, "it" | "mit" => Face::Italic, "sf" => Face::SansSerif, "tt" => Face::Mono, _ => Face::Script };
-                restyle(group(self.list(None)), face)
+                restyle(self.rest(), face)
             }
             "operatorname" => Node::Text { text: self.braced_text(), class: Class::Op },
             "mathrm" | "mathit" | "mathnormal" | "mathbf" | "mathbb" | "mathcal" | "mathscr" | "mathfrak" | "mathsf" | "mathtt" | "boldsymbol" | "bm" | "pmb" | "mathbfit" | "mathbfcal" | "mathsfit" => {
@@ -352,10 +374,10 @@ impl Parser {
             "hline" | "hdashline" | "displaystyle_" => Node::Group(vec![]),
             "overline" => Node::Over { base: Box::new(self.argument()), under: false },
             "underline" => Node::Over { base: Box::new(self.argument()), under: true },
-            "displaystyle" => Node::Style(StyleChange::Display, Box::new(group(self.list(None)))),
-            "textstyle" => Node::Style(StyleChange::Text, Box::new(group(self.list(None)))),
-            "scriptstyle" => Node::Style(StyleChange::Script, Box::new(group(self.list(None)))),
-            "scriptscriptstyle" => Node::Style(StyleChange::ScriptScript, Box::new(group(self.list(None)))),
+            "displaystyle" => Node::Style(StyleChange::Display, Box::new(self.rest())),
+            "textstyle" => Node::Style(StyleChange::Text, Box::new(self.rest())),
+            "scriptstyle" => Node::Style(StyleChange::Script, Box::new(self.rest())),
+            "scriptscriptstyle" => Node::Style(StyleChange::ScriptScript, Box::new(self.rest())),
             "," | "thinspace" => Node::Space(3.0 / 18.0), ":" | ">" | "medspace" => Node::Space(4.0 / 18.0), ";" | "thickspace" => Node::Space(5.0 / 18.0),
             "!" | "negthinspace" => Node::Space(-3.0 / 18.0), "negmedspace" => Node::Space(-4.0 / 18.0), "negthickspace" => Node::Space(-5.0 / 18.0),
             " " => Node::Space(0.25), "enspace" | "enskip" => Node::Space(0.5), "quad" => Node::Space(1.0), "qquad" => Node::Space(2.0),
@@ -445,4 +467,13 @@ pub fn unknown(node: &Node, out: &mut Vec<String>) {
         Node::Arrow { over, under, .. } => [over, under].into_iter().flatten().for_each(|n| each(n)),
         Node::Symbol { .. } | Node::Text { .. } | Node::Sized { .. } | Node::LargeOp { .. } | Node::NamedOp { .. } | Node::Space(_) => {}
     }
+}
+
+/// A number in lower-case Roman numerals, as \romannumeral writes it; nothing for zero.
+fn roman(mut n: u32) -> String {
+    let mut out = String::new();
+    for (value, digits) in [(1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (90, "xc"), (50, "l"), (40, "xl"), (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")] {
+        while n >= value { out.push_str(digits); n -= value; }
+    }
+    out
 }

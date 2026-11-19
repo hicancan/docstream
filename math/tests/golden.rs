@@ -55,7 +55,10 @@ fn the_commands_notes_write_are_understood() {
         r"\nrightarrow", r"\nRightarrow", r"\gtrsim", r"\lesssim", r"\ngtr", r"\rightharpoondown", r"\intercal", r"{a \atop b}",
         r"\oiint", r"\triangleq", r"\enspace", r"\hspace{2em}", r"\updownarrow", r"\Uparrow", r"\Downarrow", r"\rightleftarrows",
         r"\curvearrowright", r"\twoheadrightarrow", r"\Rsh", r"\Vdash", r"\sqsubseteq", r"\varkappa", r"\bigsqcup", r"\overleftrightarrow{AB}",
-        r"\boxminus", r"\hspace{1.5cm}", r"\hspace*{3pt}"] {
+        r"\boxminus", r"\hspace{1.5cm}", r"\hspace*{3pt}", r"\textsc{Ab}", r"\beth", r"\box", r"\astrosun", r"\vdot",
+        r"\ulcorner x \urcorner", r"\llcorner x \lrcorner", r"t_{\romannumeral 4}",
+        r"\begin{cases} \displaystyle \sum_k a_k, & x \\ \displaystyle \int f, & y \end{cases}",
+        r"\left( \displaystyle \frac{a}{b} \right)", r"\begin{array}{ll} {\bf x} & \rm d \\ \it y & z \end{array}"] {
         assert!(docstream_math::unknown(tex).is_empty(), "{tex}: {:?}", docstream_math::unknown(tex));
     }
 }
